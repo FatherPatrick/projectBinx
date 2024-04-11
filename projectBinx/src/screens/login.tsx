@@ -10,7 +10,11 @@ import {
 import LoginService, {Credentials} from '../services/loginService';
 import DeviceInfo from 'react-native-device-info';
 
-const LoginScreen = () => {
+interface Props {
+  navigation: any;
+}
+
+const LoginScreen: React.FC<Props> = ({navigation}) => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [deviceId, setDeviceId] = useState('');
@@ -42,11 +46,11 @@ const LoginScreen = () => {
   };
 
   const handleForgotPassword = () => {
-    //navigate to forgotPassword screen
+    navigation.navigate('ForgotPassword');
   };
 
   const handleNewAcc = () => {
-    //navigate to createAccount screen
+    navigation.navigate('CreateAccount');
   };
 
   return (
