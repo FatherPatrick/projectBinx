@@ -12,7 +12,7 @@ const LoginService = {
   // Verify user
   tryLogin: async (login: Credentials) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/Login`, login);
+      const response = await axios.post(`${API_BASE_URL}/login`, login);
       return response.data;
     } catch (error) {
       throw error;
@@ -21,7 +21,7 @@ const LoginService = {
 
   createAcc: async (login: Credentials) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/Login/New`, login);
+      const response = await axios.post(`${API_BASE_URL}/login/new`, login);
       return response.data;
     } catch (error) {
       throw error;
@@ -31,7 +31,7 @@ const LoginService = {
   //figure out this shit
   forgotPassword: async (login: Credentials) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/Login/Forgot`, login);
+      const response = await axios.post(`${API_BASE_URL}/login/forgot`, login);
       return response.data;
     } catch (error) {
       throw error;
