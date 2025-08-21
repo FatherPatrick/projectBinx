@@ -3,7 +3,6 @@ import {View, Text, FlatList, ActivityIndicator} from 'react-native';
 import PollService from '../services/pollService';
 import {PollData} from '../types/pollTypes';
 import SimplePoll from '../components/pollTypes/simplePoll';
-import MultiChoicePoll from '../components/pollTypes/multiChoicePoll';
 import SliderPoll from '../components/pollTypes/sliderPoll';
 
 const Home = () => {
@@ -16,7 +15,7 @@ const Home = () => {
 
   const fetchPolls = async () => {
     try {
-      const polls = await PollService.getPolls();
+      const polls = await PollService.getPagedPolls();
       setPolls(polls);
       setLoading(false);
     } catch (error) {
@@ -28,8 +27,6 @@ const Home = () => {
   const renderPoll = (poll: PollData) => {
     if (poll.type === 'simple') {
       return <SimplePoll poll={poll} />;
-    } else if (poll.type === 'multi') {
-      return <MultiChoicePoll poll={poll} />;
     } else if (poll.type === 'slider') {
       return <SliderPoll poll={poll} />;
     }
@@ -50,7 +47,7 @@ const Home = () => {
       <FlatList
         data={polls}
         renderItem={({item}) => renderPoll(item)}
-        keyExtractor={item => item.pollId.toString()}
+        keyExtractor={item => item.pollId!.toString()}
       />
     </View>
   );
