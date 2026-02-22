@@ -1,15 +1,21 @@
 import axios from 'axios';
 import {Polls} from '../uri';
-import {PollData} from '../types/pollTypes';
+import {
+  PollData,
+  PollQueryParams,
+  PollResult,
+  VoteRequest,
+} from '../types/pollTypes';
+import {toServiceError} from './serviceError';
 
 const PollService = {
   // Used to fetch polls on home page and user profile
-  getPagedPolls: async (params?: any) => {
+  getPagedPolls: async (params?: PollQueryParams): Promise<PollData[]> => {
     try {
       const response = await axios.get(Polls.getPagedPolls, {params});
       return response.data;
     } catch (error) {
-      throw error;
+      throw toServiceError(error, 'Unable to fetch polls right now.');
     }
   },
 
@@ -20,7 +26,7 @@ const PollService = {
       const response = await axios.put(url, updatedPoll);
       return response.data;
     } catch (error) {
-      throw error;
+      throw toServiceError(error, 'Unable to update poll right now.');
     }
   },
 
@@ -30,7 +36,7 @@ const PollService = {
       const response = await axios.post(Polls.postPoll, newPoll);
       return response.data;
     } catch (error) {
-      throw error;
+      throw toServiceError(error, 'Unable to create poll right now.');
     }
   },
 
@@ -41,29 +47,29 @@ const PollService = {
       const response = await axios.delete(url);
       return response.data;
     } catch (error) {
-      throw error;
+      throw toServiceError(error, 'Unable to delete poll right now.');
     }
   },
 
   // Used to vote on a poll
-  voteById: async (id: number, vote: any) => {
+  voteById: async (id: number, vote: number | VoteRequest) => {
     try {
       const url = Polls.voteById.replace(':id', String(id));
       const response = await axios.post(url, vote);
       return response.data;
     } catch (error) {
-      throw error;
+      throw toServiceError(error, 'Unable to submit vote right now.');
     }
   },
 
   // Used to get results of a specific poll (should only be called after voting from FE)
-  getPollResultsById: async (id: number) => {
+  getPollResultsById: async (id: number): Promise<PollResult[]> => {
     try {
       const url = Polls.getPollResultsById.replace(':id', String(id));
       const response = await axios.get(url);
       return response.data;
     } catch (error) {
-      throw error;
+      throw toServiceError(error, 'Unable to fetch poll results right now.');
     }
   },
 };

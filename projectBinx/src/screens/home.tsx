@@ -1,9 +1,18 @@
-import {useState, useEffect} from 'react';
-import {View, Text, FlatList, ActivityIndicator} from 'react-native';
+import React, {useEffect, useState} from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import PollService from '../services/pollService';
+import {mockPolls} from '../data/testData';
 import {PollData} from '../types/pollTypes';
 import SimplePoll from '../components/pollTypes/simplePoll';
 import SliderPoll from '../components/pollTypes/sliderPoll';
+
+const USE_MOCK_POLLS = true;
 
 const Home = () => {
   const [loading, setLoading] = useState(true);
@@ -15,8 +24,10 @@ const Home = () => {
 
   const fetchPolls = async () => {
     try {
-      const polls = await PollService.getPagedPolls();
-      setPolls(polls);
+      const fetchedPolls = USE_MOCK_POLLS
+        ? mockPolls
+        : await PollService.getPagedPolls();
+      setPolls(fetchedPolls);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching polls:', error);
@@ -35,15 +46,15 @@ const Home = () => {
 
   if (loading) {
     return (
-      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#0000ff" />
       </View>
     );
   }
 
   return (
-    <View style={{flex: 1, padding: 20}}>
-      <Text style={{fontSize: 24, marginBottom: 20}}>Polls</Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>Polls</Text>
       <FlatList
         data={polls}
         renderItem={({item}) => renderPoll(item)}
@@ -52,5 +63,21 @@ const Home = () => {
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  container: {
+    flex: 1,
+    padding: 20,
+  },
+  title: {
+    fontSize: 24,
+    marginBottom: 20,
+  },
+});
 
 export default Home;

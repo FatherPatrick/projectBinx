@@ -9,39 +9,62 @@ import {
 } from 'react-native';
 import LoginService, {Credentials} from '../services/loginService';
 import DeviceInfo from 'react-native-device-info';
+import {StackNavigationProp} from '@react-navigation/stack';
+import {RootStackParamList} from '../types/navigation';
 
 interface Props {
-  navigation: any;
+  navigation: StackNavigationProp<RootStackParamList, 'Login'>;
 }
 
 const LoginScreen: React.FC<Props> = ({navigation}) => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [deviceId, setDeviceId] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     // Fetch the device ID when the component mounts
     const fetchDeviceId = async () => {
-      const deviceId = await DeviceInfo.getUniqueId();
-      setDeviceId(deviceId);
+      const uniqueDeviceId = await DeviceInfo.getUniqueId();
+      setDeviceId(uniqueDeviceId);
     };
 
     fetchDeviceId();
   }, []);
 
-  const handleLogin = () => {
-    if (password === '') {
-      //add some logic about password is empty, forgot password?
+  const handleLogin = async () => {
+    const trimmedPhoneNumber = phoneNumber.trim();
+    if (!trimmedPhoneNumber) {
+      setErrorMessage('Phone number is required.');
+      return;
     }
+
+    if (!password) {
+      setErrorMessage('Password is required.');
+      return;
+    }
+
+    if (!deviceId) {
+      setErrorMessage('Device not ready yet. Please try again.');
+      return;
+    }
+
+    setErrorMessage(null);
     const credentials: Credentials = {
-      phoneNumber,
+      phoneNumber: trimmedPhoneNumber,
       password,
       deviceId,
     };
+
     try {
-      LoginService.tryLogin(credentials);
+      setLoading(true);
+      await LoginService.tryLogin(credentials);
+      navigation.navigate('Home');
     } catch (error) {
-      throw error;
+      setErrorMessage('Login failed. Please check your credentials.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -60,16 +83,28 @@ const LoginScreen: React.FC<Props> = ({navigation}) => {
         style={styles.input}
         placeholder="Phone number"
         value={phoneNumber}
-        onChangeText={setPhoneNumber}
+        keyboardType="phone-pad"
+        onChangeText={text => {
+          setPhoneNumber(text);
+          if (errorMessage) {
+            setErrorMessage(null);
+          }
+        }}
       />
       <TextInput
         style={styles.input}
         placeholder="Password"
         secureTextEntry={true}
         value={password}
-        onChangeText={setPassword}
+        onChangeText={text => {
+          setPassword(text);
+          if (errorMessage) {
+            setErrorMessage(null);
+          }
+        }}
       />
-      <Button title="Login" onPress={handleLogin} />
+      {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+      <Button title={loading ? 'Logging in...' : 'Login'} onPress={handleLogin} disabled={loading} />
       <TouchableOpacity onPress={handleForgotPassword}>
         <Text style={styles.forgotPassword}>Forgot Password?</Text>
       </TouchableOpacity>
@@ -109,6 +144,11 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: 'green',
     textDecorationLine: 'underline',
+  },
+  errorText: {
+    width: '100%',
+    color: '#b00020',
+    marginBottom: 10,
   },
 });
 

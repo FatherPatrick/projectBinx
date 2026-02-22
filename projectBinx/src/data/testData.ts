@@ -84,6 +84,65 @@ export const testPolls: PollData[] = [
   },
 ];
 
+export const edgeCasePolls: PollData[] = [
+  {
+    pollId: 101,
+    user: 'qa_user',
+    title:
+      'Very long title: Would you use an app experience that includes detailed voting analytics, comment moderation, and customizable preference settings?',
+    description:
+      'This poll is intentionally verbose to test text wrapping and layout behavior on smaller screens.',
+    type: 'simple',
+    allowComments: true,
+    options: [
+      {optionTypeId: 1, optionText: 'Absolutely, I would use it daily'},
+      {optionTypeId: 2, optionText: 'Maybe, depending on performance'},
+    ],
+  },
+  {
+    pollId: 102,
+    user: 'qa_user',
+    title: 'Minimal poll with no description',
+    type: 'simple',
+    allowComments: false,
+    options: [
+      {optionTypeId: 1, optionText: 'Option A'},
+      {optionTypeId: 2, optionText: 'Option B'},
+    ],
+  },
+  {
+    pollId: 103,
+    user: 'qa_user',
+    title: 'Slider poll with many options',
+    description: 'Used to test rendering and scrolling of longer option lists.',
+    type: 'slider',
+    allowComments: true,
+    options: [
+      {optionTypeId: 1, optionText: 'Strongly dislike'},
+      {optionTypeId: 2, optionText: 'Dislike'},
+      {optionTypeId: 3, optionText: 'Neutral'},
+      {optionTypeId: 4, optionText: 'Like'},
+      {optionTypeId: 5, optionText: 'Strongly like'},
+      {optionTypeId: 6, optionText: 'Love it'},
+    ],
+  },
+  {
+    pollId: 104,
+    user: 'qa_user',
+    title: 'Unsupported poll type coverage',
+    description: 'This validates behavior for poll types not rendered yet.',
+    type: 'multi',
+    allowComments: true,
+    options: [
+      {optionTypeId: 1, optionText: 'Alpha'},
+      {optionTypeId: 2, optionText: 'Beta'},
+      {optionTypeId: 3, optionText: 'Gamma'},
+    ],
+  },
+];
+
+export const mockPolls: PollData[] = [...testPolls, ...edgeCasePolls];
+
 export const testResults: Results[] = [
   {pollId: 1, optionId: 1, votes: 45},
   {pollId: 1, optionId: 2, votes: 23},

@@ -1,5 +1,16 @@
 export type PollType = 'simple' | 'multi' | 'slider';
 
+export interface PollQueryParams {
+  page?: number;
+  pageSize?: number;
+  user?: string;
+  type?: PollType;
+}
+
+export interface VoteRequest {
+  optionId: number;
+}
+
 export interface PollData {
   pollId?: number;
   user: string;
@@ -7,16 +18,21 @@ export interface PollData {
   description?: string;
   type: PollType;
   allowComments: boolean;
-  options: Options[];
+  options: PollOption[];
 }
 
-export interface Options {
+export interface PollOption {
+  optionId?: number;
   optionTypeId?: number;
   optionText: string;
 }
 
-export interface Results {
+export type Options = PollOption;
+
+export interface PollResult {
   pollId: number;
   optionId: number;
   votes: number;
 }
+
+export type Results = PollResult;

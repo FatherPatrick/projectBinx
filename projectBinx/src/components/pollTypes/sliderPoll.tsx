@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
-import {View, Text, TouchableOpacity} from 'react-native';
-import {PollData, Options} from '../../types/pollTypes';
+import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {PollData} from '../../types/pollTypes';
 import PollService from '../../services/pollService';
 
 interface SliderPollProps {
@@ -10,59 +10,125 @@ interface SliderPollProps {
 // Basic layout: title, description, options
 const SliderPoll: React.FC<SliderPollProps> = ({poll}) => {
   const [selected, setSelected] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [voteError, setVoteError] = useState<string | null>(null);
+
+  const handleVote = async (optionIndex: number) => {
+    if (isSubmitting) {
+      return;
+    }
+
+    const previousSelection = selected;
+    setVoteError(null);
+    setSelected(optionIndex);
+
+    try {
+      setIsSubmitting(true);
+      await PollService.voteById(poll.pollId!, optionIndex);
+    } catch (error) {
+      setSelected(previousSelection);
+      setVoteError('Unable to submit your vote. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
-    <View
-      style={{
-        padding: 16,
-        backgroundColor: '#e0e0e0',
-        marginBottom: 10,
-        borderRadius: 8,
-      }}>
-      <Text style={{fontSize: 20, fontWeight: 'bold', marginBottom: 4}}>
-        {poll.title}
-      </Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>{poll.title}</Text>
       {poll.description ? (
-        <Text style={{fontSize: 14, color: '#555', marginBottom: 12}}>
-          {poll.description}
-        </Text>
+        <Text style={styles.description}>{poll.description}</Text>
       ) : null}
+      {voteError ? <Text style={styles.errorText}>{voteError}</Text> : null}
       {/* Options - placeholder for now */}
-      <View style={{alignItems: 'flex-start'}}>
+      <View style={styles.optionsContainer}>
         {poll.options.map((option, idx) => (
           <TouchableOpacity
             key={idx}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              padding: 8,
-              backgroundColor: selected === idx ? '#cce5ff' : '#fff',
-              borderRadius: 4,
-              marginBottom: 6,
-            }}
-            onPress={() => {
-              setSelected(idx);
-              PollService.voteById(poll.pollId!, idx);
-            }}>
+            style={[
+              styles.optionButton,
+              selected === idx
+                ? styles.optionButtonSelected
+                : styles.optionButtonUnselected,
+              isSubmitting ? styles.optionButtonDisabled : null,
+            ]}
+            disabled={isSubmitting}
+            onPress={() => handleVote(idx)}>
             <View
-              style={{
-                width: 20,
-                height: 20,
-                borderRadius: 10,
-                borderWidth: 2,
-                borderColor: '#007bff',
-                marginRight: 8,
-                justifyContent: 'center',
-                alignItems: 'center',
-                backgroundColor: selected === idx ? '#007bff' : '#fff',
-              }}
+              style={[
+                styles.radio,
+                selected === idx
+                  ? styles.radioSelected
+                  : styles.radioUnselected,
+              ]}
             />
-            <Text style={{fontSize: 16}}>{option.optionText}</Text>
+            <Text style={styles.optionText}>{option.optionText}</Text>
           </TouchableOpacity>
         ))}
       </View>
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    padding: 16,
+    backgroundColor: '#e0e0e0',
+    marginBottom: 10,
+    borderRadius: 8,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  description: {
+    fontSize: 14,
+    color: '#555',
+    marginBottom: 12,
+  },
+  optionsContainer: {
+    alignItems: 'flex-start',
+  },
+  optionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 4,
+    marginBottom: 6,
+  },
+  optionButtonSelected: {
+    backgroundColor: '#cce5ff',
+  },
+  optionButtonUnselected: {
+    backgroundColor: '#fff',
+  },
+  radio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#007bff',
+    marginRight: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  radioSelected: {
+    backgroundColor: '#007bff',
+  },
+  radioUnselected: {
+    backgroundColor: '#fff',
+  },
+  optionText: {
+    fontSize: 16,
+  },
+  optionButtonDisabled: {
+    opacity: 0.6,
+  },
+  errorText: {
+    color: '#b00020',
+    marginBottom: 8,
+  },
+});
 
 export default SliderPoll;

@@ -5,15 +5,16 @@ import Home from './src/screens/home';
 import {createStackNavigator} from '@react-navigation/stack';
 import CreateAccount from './src/screens/createAcc';
 import ForgotPassword from './src/screens/forgotPassword';
+import {RootStackParamList} from './src/types/navigation';
 
-const Stack = createStackNavigator();
+const Stack = createStackNavigator<RootStackParamList>();
 
 function App(): React.JSX.Element {
   return (
     <NavigationContainer>
       <Stack.Navigator>
         <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="CreateAcc" component={CreateAccount} />
+        <Stack.Screen name="CreateAccount" component={CreateAccount} />
         <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
         <Stack.Screen name="Home" component={Home} />
       </Stack.Navigator>
