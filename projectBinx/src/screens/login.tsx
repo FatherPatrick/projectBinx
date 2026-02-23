@@ -11,6 +11,8 @@ import LoginService, {Credentials} from '../services/loginService';
 import DeviceInfo from 'react-native-device-info';
 import {StackNavigationProp} from '@react-navigation/stack';
 import {RootStackParamList} from '../types/navigation';
+import SessionService from '../services/sessionService';
+import globalStyles from '../styles/globalStyles';
 
 interface Props {
   navigation: StackNavigationProp<RootStackParamList, 'Login'>;
@@ -59,7 +61,8 @@ const LoginScreen: React.FC<Props> = ({navigation}) => {
 
     try {
       setLoading(true);
-      await LoginService.tryLogin(credentials);
+      const loginResponse = await LoginService.tryLogin(credentials);
+      SessionService.setCurrentUserFromAuthUser(loginResponse.user);
       navigation.navigate('MainTabs', {screen: 'Home'});
     } catch (error) {
       setErrorMessage('Login failed. Please check your credentials.');
@@ -83,10 +86,10 @@ const LoginScreen: React.FC<Props> = ({navigation}) => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
+    <View style={globalStyles.screenCentered}>
+      <Text style={globalStyles.title}>Login</Text>
       <TextInput
-        style={styles.input}
+        style={[globalStyles.input, styles.input]}
         placeholder="Phone number"
         value={phoneNumber}
         keyboardType="phone-pad"
@@ -98,7 +101,7 @@ const LoginScreen: React.FC<Props> = ({navigation}) => {
         }}
       />
       <TextInput
-        style={styles.input}
+        style={[globalStyles.input, styles.input]}
         placeholder="Password"
         secureTextEntry={true}
         value={password}
@@ -112,7 +115,9 @@ const LoginScreen: React.FC<Props> = ({navigation}) => {
       <TouchableOpacity onPress={handleUseTestAccount}>
         <Text style={styles.testAccount}>Use Test Account</Text>
       </TouchableOpacity>
-      {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+      {errorMessage ? (
+        <Text style={globalStyles.errorText}>{errorMessage}</Text>
+      ) : null}
       <Button title={loading ? 'Logging in...' : 'Login'} onPress={handleLogin} disabled={loading} />
       <TouchableOpacity onPress={handleForgotPassword}>
         <Text style={styles.forgotPassword}>Forgot Password?</Text>
@@ -125,28 +130,12 @@ const LoginScreen: React.FC<Props> = ({navigation}) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    marginBottom: 20,
-  },
   input: {
-    width: '100%',
     height: 40,
-    borderColor: 'gray',
-    borderWidth: 1,
-    borderRadius: 5,
-    marginBottom: 10,
-    paddingHorizontal: 10,
   },
   forgotPassword: {
     marginTop: 10,
-    color: 'blue',
+    color: '#1d4ed8',
     textDecorationLine: 'underline',
   },
   testAccount: {
@@ -159,11 +148,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: 'green',
     textDecorationLine: 'underline',
-  },
-  errorText: {
-    width: '100%',
-    color: '#b00020',
-    marginBottom: 10,
   },
 });
 

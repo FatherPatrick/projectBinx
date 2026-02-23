@@ -2,6 +2,7 @@ import React, {useState} from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {PollData} from '../../types/pollTypes';
 import PollService from '../../services/pollService';
+import pollStyles from '../../styles/pollStyles';
 
 interface MultiPollProps {
   poll: PollData;
@@ -33,36 +34,36 @@ const MultiPoll: React.FC<MultiPollProps> = ({poll}) => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{poll.title}</Text>
+    <View style={pollStyles.card}>
+      <Text style={pollStyles.title}>{poll.title}</Text>
       {poll.description ? (
-        <Text style={styles.description}>{poll.description}</Text>
+        <Text style={pollStyles.description}>{poll.description}</Text>
       ) : null}
-      {voteError ? <Text style={styles.errorText}>{voteError}</Text> : null}
+      {voteError ? <Text style={pollStyles.errorText}>{voteError}</Text> : null}
 
       <View style={styles.optionsContainer}>
         {poll.options.map((option, idx) => (
           <TouchableOpacity
             key={idx}
             style={[
-              styles.optionButton,
+              pollStyles.optionButtonBase,
               selected === idx
-                ? styles.optionButtonSelected
-                : styles.optionButtonUnselected,
-              isSubmitting ? styles.optionButtonDisabled : null,
+                ? pollStyles.optionButtonSelected
+                : pollStyles.optionButtonUnselected,
+              isSubmitting ? pollStyles.optionButtonDisabled : null,
             ]}
             disabled={isSubmitting}
             onPress={() => handleVote(idx)}>
             <View
               style={[
-                styles.radioOuter,
+                pollStyles.radioOuter,
                 selected === idx
-                  ? styles.radioOuterSelected
-                  : styles.radioOuterUnselected,
+                  ? pollStyles.radioOuterSelected
+                  : pollStyles.radioOuterUnselected,
               ]}>
-              {selected === idx ? <View style={styles.radioInner} /> : null}
+              {selected === idx ? <View style={pollStyles.radioInner} /> : null}
             </View>
-            <Text style={styles.optionText}>{option.optionText}</Text>
+            <Text style={pollStyles.optionText}>{option.optionText}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -71,74 +72,8 @@ const MultiPoll: React.FC<MultiPollProps> = ({poll}) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    backgroundColor: '#e0e0e0',
-    marginBottom: 10,
-    borderRadius: 8,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  description: {
-    fontSize: 14,
-    color: '#555',
-    marginBottom: 12,
-  },
-  errorText: {
-    color: '#b00020',
-    marginBottom: 8,
-  },
   optionsContainer: {
     alignItems: 'flex-start',
-  },
-  optionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 6,
-    marginBottom: 8,
-    width: '100%',
-    borderWidth: 1,
-  },
-  optionButtonSelected: {
-    backgroundColor: '#e3f2fd',
-    borderColor: '#007bff',
-  },
-  optionButtonUnselected: {
-    backgroundColor: '#fff',
-    borderColor: '#ddd',
-  },
-  optionButtonDisabled: {
-    opacity: 0.6,
-  },
-  radioOuter: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#007bff',
-    marginRight: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  radioOuterSelected: {
-    backgroundColor: '#007bff',
-  },
-  radioOuterUnselected: {
-    backgroundColor: '#fff',
-  },
-  radioInner: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#fff',
-  },
-  optionText: {
-    fontSize: 16,
-    color: '#333',
   },
 });
 

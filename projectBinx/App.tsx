@@ -1,6 +1,6 @@
 import {NavigationContainer} from '@react-navigation/native';
 import React from 'react';
-import {Text} from 'react-native';
+import {StyleSheet, Text} from 'react-native';
 import LoginScreen from './src/screens/login';
 import Home from './src/screens/home';
 import {createStackNavigator} from '@react-navigation/stack';
@@ -10,26 +10,29 @@ import {MainTabParamList, RootStackParamList} from './src/types/navigation';
 import CreatePoll from './src/screens/createPoll';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import Profile from './src/screens/profile';
+import theme from './src/styles/theme';
 
 const Stack = createStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
+
+const renderTabIcon = (routeName: keyof MainTabParamList, color: string) => {
+  if (routeName === 'CreatePoll') {
+    return <Text style={[styles.createIcon, {color}]}>+</Text>;
+  }
+
+  if (routeName === 'Home') {
+    return <Text style={[styles.tabIconLabel, {color}]}>Home</Text>;
+  }
+
+  return <Text style={[styles.tabIconLabel, {color}]}>Profile</Text>;
+};
 
 const MainTabs = () => {
   return (
     <Tab.Navigator
       screenOptions={({route}) => ({
         headerShown: false,
-        tabBarIcon: ({color}) => {
-          if (route.name === 'CreatePoll') {
-            return <Text style={{fontSize: 24, color}}>+</Text>;
-          }
-
-          if (route.name === 'Home') {
-            return <Text style={{fontSize: 14, color}}>Home</Text>;
-          }
-
-          return <Text style={{fontSize: 14, color}}>Profile</Text>;
-        },
+        tabBarIcon: ({color}) => renderTabIcon(route.name, color),
       })}>
       <Tab.Screen
         name="Home"
@@ -66,5 +69,14 @@ function App(): React.JSX.Element {
     </NavigationContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  createIcon: {
+    fontSize: theme.fontSize.xxl,
+  },
+  tabIconLabel: {
+    fontSize: theme.fontSize.md,
+  },
+});
 
 export default App;

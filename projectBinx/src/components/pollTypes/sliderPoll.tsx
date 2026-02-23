@@ -2,6 +2,8 @@ import React, {useState} from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {PollData} from '../../types/pollTypes';
 import PollService from '../../services/pollService';
+import pollStyles from '../../styles/pollStyles';
+import theme from '../../styles/theme';
 
 interface SliderPollProps {
   poll: PollData;
@@ -12,6 +14,11 @@ const SliderPoll: React.FC<SliderPollProps> = ({poll}) => {
   const [selected, setSelected] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [voteError, setVoteError] = useState<string | null>(null);
+  const optionCount = poll.options.length;
+
+  const sliderIndex = selected ?? Math.floor((optionCount - 1) / 2);
+  const sliderThumbLeftPercent =
+    optionCount > 1 ? (sliderIndex / (optionCount - 1)) * 100 : 0;
 
   const handleVote = async (optionIndex: number) => {
     if (isSubmitting) {
@@ -34,35 +41,52 @@ const SliderPoll: React.FC<SliderPollProps> = ({poll}) => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{poll.title}</Text>
+    <View style={pollStyles.card}>
+      <Text style={pollStyles.title}>{poll.title}</Text>
       {poll.description ? (
-        <Text style={styles.description}>{poll.description}</Text>
+        <Text style={pollStyles.description}>{poll.description}</Text>
       ) : null}
-      {voteError ? <Text style={styles.errorText}>{voteError}</Text> : null}
-      {/* Options - placeholder for now */}
+      {voteError ? <Text style={pollStyles.errorText}>{voteError}</Text> : null}
+
+      <View style={styles.sliderContainer}>
+        <View style={styles.sliderTrack}>
+          <View
+            style={[
+              styles.sliderThumb,
+              {left: `${sliderThumbLeftPercent}%`},
+            ]}
+          />
+        </View>
+        <View style={styles.sliderLabelsRow}>
+          <Text style={styles.sliderEdgeLabel}>{poll.options[0]?.optionText}</Text>
+          <Text style={styles.sliderEdgeLabel}>
+            {poll.options[optionCount - 1]?.optionText}
+          </Text>
+        </View>
+      </View>
+
       <View style={styles.optionsContainer}>
         {poll.options.map((option, idx) => (
           <TouchableOpacity
             key={idx}
             style={[
-              styles.optionButton,
+              pollStyles.optionButtonBase,
               selected === idx
-                ? styles.optionButtonSelected
-                : styles.optionButtonUnselected,
-              isSubmitting ? styles.optionButtonDisabled : null,
+                ? pollStyles.optionButtonSelected
+                : pollStyles.optionButtonUnselected,
+              isSubmitting ? pollStyles.optionButtonDisabled : null,
             ]}
             disabled={isSubmitting}
             onPress={() => handleVote(idx)}>
             <View
               style={[
-                styles.radio,
+                pollStyles.radioOuter,
                 selected === idx
-                  ? styles.radioSelected
-                  : styles.radioUnselected,
+                  ? pollStyles.radioOuterSelected
+                  : pollStyles.radioOuterUnselected,
               ]}
             />
-            <Text style={styles.optionText}>{option.optionText}</Text>
+            <Text style={pollStyles.optionText}>{option.optionText}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -71,63 +95,36 @@ const SliderPoll: React.FC<SliderPollProps> = ({poll}) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    backgroundColor: '#e0e0e0',
-    marginBottom: 10,
-    borderRadius: 8,
+  sliderContainer: {
+    marginBottom: theme.spacing.md,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 4,
+  sliderTrack: {
+    height: 6,
+    borderRadius: 6,
+    backgroundColor: theme.colors.border,
+    position: 'relative',
+    marginTop: theme.spacing.xs,
+    marginBottom: theme.spacing.sm,
   },
-  description: {
-    fontSize: 14,
-    color: '#555',
-    marginBottom: 12,
+  sliderThumb: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: theme.colors.primary,
+    position: 'absolute',
+    top: -6,
+    marginLeft: -9,
+  },
+  sliderLabelsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  sliderEdgeLabel: {
+    color: theme.colors.textSecondary,
+    fontSize: theme.fontSize.sm,
   },
   optionsContainer: {
     alignItems: 'flex-start',
-  },
-  optionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
-    borderRadius: 4,
-    marginBottom: 6,
-  },
-  optionButtonSelected: {
-    backgroundColor: '#cce5ff',
-  },
-  optionButtonUnselected: {
-    backgroundColor: '#fff',
-  },
-  radio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#007bff',
-    marginRight: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  radioSelected: {
-    backgroundColor: '#007bff',
-  },
-  radioUnselected: {
-    backgroundColor: '#fff',
-  },
-  optionText: {
-    fontSize: 16,
-  },
-  optionButtonDisabled: {
-    opacity: 0.6,
-  },
-  errorText: {
-    color: '#b00020',
-    marginBottom: 8,
   },
 });
 

@@ -2,6 +2,8 @@ import React, {useState} from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {PollData} from '../../types/pollTypes';
 import PollService from '../../services/pollService';
+import pollStyles from '../../styles/pollStyles';
+import theme from '../../styles/theme';
 
 interface SimplePollProps {
   poll: PollData;
@@ -77,36 +79,36 @@ const SimplePoll: React.FC<SimplePollProps> = ({poll}) => {
         <TouchableOpacity
           key={idx}
           style={[
-            styles.listOptionButton,
+            pollStyles.optionButtonBase,
             selected === idx
-              ? styles.listOptionButtonSelected
-              : styles.listOptionButtonUnselected,
-            isSubmitting ? styles.optionButtonDisabled : null,
+              ? pollStyles.optionButtonSelected
+              : pollStyles.optionButtonUnselected,
+            isSubmitting ? pollStyles.optionButtonDisabled : null,
           ]}
           disabled={isSubmitting}
           onPress={() => handleVote(idx)}>
           <View
             style={[
-              styles.radioOuter,
+              pollStyles.radioOuter,
               selected === idx
-                ? styles.radioOuterSelected
-                : styles.radioOuterUnselected,
+                ? pollStyles.radioOuterSelected
+                : pollStyles.radioOuterUnselected,
             ]}>
-            {selected === idx && <View style={styles.radioInner} />}
+            {selected === idx && <View style={pollStyles.radioInner} />}
           </View>
-          <Text style={styles.listOptionText}>{option.optionText}</Text>
+          <Text style={pollStyles.optionText}>{option.optionText}</Text>
         </TouchableOpacity>
       ))}
     </View>
   );
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{poll.title}</Text>
+    <View style={pollStyles.card}>
+      <Text style={pollStyles.title}>{poll.title}</Text>
       {poll.description ? (
-        <Text style={styles.description}>{poll.description}</Text>
+        <Text style={pollStyles.description}>{poll.description}</Text>
       ) : null}
-      {voteError ? <Text style={styles.errorText}>{voteError}</Text> : null}
+      {voteError ? <Text style={pollStyles.errorText}>{voteError}</Text> : null}
 
       {isYesNo || isUpDown ? renderBinaryOptions() : renderListOptions()}
     </View>
@@ -114,22 +116,6 @@ const SimplePoll: React.FC<SimplePollProps> = ({poll}) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    backgroundColor: '#e0e0e0',
-    marginBottom: 10,
-    borderRadius: 8,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  description: {
-    fontSize: 14,
-    color: '#555',
-    marginBottom: 12,
-  },
   binaryOptionsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -143,75 +129,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   binaryOptionButtonSelected: {
-    backgroundColor: '#007bff',
-    borderColor: '#007bff',
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
   },
   binaryOptionButtonUnselected: {
-    backgroundColor: '#fff',
-    borderColor: '#ccc',
+    backgroundColor: theme.colors.surface,
+    borderColor: theme.colors.border,
   },
   binaryOptionText: {
-    fontSize: 18,
+    fontSize: theme.fontSize.lg,
     fontWeight: 'bold',
   },
   binaryOptionTextSelected: {
-    color: '#fff',
+    color: theme.colors.surface,
   },
   binaryOptionTextUnselected: {
-    color: '#333',
+    color: theme.colors.textPrimary,
   },
   listOptionsContainer: {
     alignItems: 'flex-start',
-  },
-  listOptionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 6,
-    marginBottom: 8,
-    width: '100%',
-    borderWidth: 1,
-  },
-  listOptionButtonSelected: {
-    backgroundColor: '#e3f2fd',
-    borderColor: '#007bff',
-  },
-  listOptionButtonUnselected: {
-    backgroundColor: '#fff',
-    borderColor: '#ddd',
-  },
-  radioOuter: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#007bff',
-    marginRight: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  radioOuterSelected: {
-    backgroundColor: '#007bff',
-  },
-  radioOuterUnselected: {
-    backgroundColor: '#fff',
-  },
-  radioInner: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#fff',
-  },
-  listOptionText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  optionButtonDisabled: {
-    opacity: 0.6,
-  },
-  errorText: {
-    color: '#b00020',
-    marginBottom: 8,
   },
 });
 

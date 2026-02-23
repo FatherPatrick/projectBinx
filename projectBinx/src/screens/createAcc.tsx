@@ -4,6 +4,7 @@ import DeviceInfo from 'react-native-device-info';
 import LoginService, {Credentials} from '../services/loginService';
 import {StackNavigationProp} from '@react-navigation/stack';
 import {RootStackParamList} from '../types/navigation';
+import globalStyles from '../styles/globalStyles';
 
 interface Props {
   navigation: StackNavigationProp<RootStackParamList, 'CreateAccount'>;
@@ -71,10 +72,10 @@ const CreateAccount: React.FC<Props> = ({navigation}) => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Create Account</Text>
+    <View style={globalStyles.screenCentered}>
+      <Text style={globalStyles.title}>Create Account</Text>
       <TextInput
-        style={styles.input}
+        style={[globalStyles.input, styles.input]}
         placeholder="Phone Number"
         keyboardType="phone-pad"
         value={phoneNumber}
@@ -86,7 +87,7 @@ const CreateAccount: React.FC<Props> = ({navigation}) => {
         }}
       />
       <TextInput
-        style={styles.input}
+        style={[globalStyles.input, styles.input]}
         placeholder="Password"
         secureTextEntry={true}
         value={password}
@@ -98,7 +99,7 @@ const CreateAccount: React.FC<Props> = ({navigation}) => {
         }}
       />
       <TextInput
-        style={styles.input}
+        style={[globalStyles.input, styles.input]}
         placeholder="Confirm Password"
         secureTextEntry={true}
         value={confirmPassword}
@@ -109,8 +110,12 @@ const CreateAccount: React.FC<Props> = ({navigation}) => {
           }
         }}
       />
-      {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
-      {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
+      {errorMessage ? (
+        <Text style={globalStyles.errorText}>{errorMessage}</Text>
+      ) : null}
+      {successMessage ? (
+        <Text style={globalStyles.successText}>{successMessage}</Text>
+      ) : null}
       <Button
         title={loading ? 'Creating Account...' : 'Create Account'}
         onPress={handleCreateAccount}
@@ -121,34 +126,8 @@ const CreateAccount: React.FC<Props> = ({navigation}) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    marginBottom: 20,
-  },
   input: {
-    width: '100%',
     height: 40,
-    borderColor: 'gray',
-    borderWidth: 1,
-    borderRadius: 5,
-    marginBottom: 10,
-    paddingHorizontal: 10,
-  },
-  errorText: {
-    width: '100%',
-    color: '#b00020',
-    marginBottom: 10,
-  },
-  successText: {
-    width: '100%',
-    color: '#1b5e20',
-    marginBottom: 10,
   },
 });
 

@@ -1,11 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import {ActivityIndicator, FlatList, Text, View} from 'react-native';
 import {RouteProp} from '@react-navigation/native';
 import {BottomTabNavigationProp} from '@react-navigation/bottom-tabs';
 import PollService from '../services/pollService';
@@ -15,6 +9,8 @@ import SimplePoll from '../components/pollTypes/simplePoll';
 import SliderPoll from '../components/pollTypes/sliderPoll';
 import MultiPoll from '../components/pollTypes/multiPoll';
 import {MainTabParamList} from '../types/navigation';
+import globalStyles from '../styles/globalStyles';
+import theme from '../styles/theme';
 
 const USE_MOCK_POLLS = true;
 
@@ -68,50 +64,23 @@ const Home: React.FC<Props> = ({navigation, route}) => {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0000ff" />
+      <View style={globalStyles.loadingContainer}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Polls</Text>
+    <View style={globalStyles.screen}>
+      <Text style={globalStyles.title}>Polls</Text>
       <FlatList
         data={polls}
         renderItem={({item}) => renderPoll(item)}
         keyExtractor={item => item.pollId!.toString()}
+        showsVerticalScrollIndicator={true}
       />
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  container: {
-    flex: 1,
-    padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    marginBottom: 10,
-  },
-  createButton: {
-    backgroundColor: '#007bff',
-    borderRadius: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    marginBottom: 14,
-    alignSelf: 'flex-start',
-  },
-  createButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-});
 
 export default Home;

@@ -2,6 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {View, Text, TextInput, Button, StyleSheet} from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 import LoginService, {Credentials} from '../services/loginService';
+import globalStyles from '../styles/globalStyles';
 
 const ForgotPassword = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -51,10 +52,10 @@ const ForgotPassword = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Forgot Password</Text>
+    <View style={globalStyles.screenCentered}>
+      <Text style={globalStyles.title}>Forgot Password</Text>
       <TextInput
-        style={styles.input}
+        style={[globalStyles.input, styles.input]}
         placeholder="Phone Number"
         keyboardType="phone-pad"
         value={phoneNumber}
@@ -65,8 +66,12 @@ const ForgotPassword = () => {
           }
         }}
       />
-      {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
-      {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
+      {errorMessage ? (
+        <Text style={globalStyles.errorText}>{errorMessage}</Text>
+      ) : null}
+      {successMessage ? (
+        <Text style={globalStyles.successText}>{successMessage}</Text>
+      ) : null}
       <Button
         title={loading ? 'Sending Request...' : 'Reset Password'}
         onPress={handleResetPassword}
@@ -77,34 +82,8 @@ const ForgotPassword = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    marginBottom: 20,
-  },
   input: {
-    width: '100%',
     height: 40,
-    borderColor: 'gray',
-    borderWidth: 1,
-    borderRadius: 5,
-    marginBottom: 10,
-    paddingHorizontal: 10,
-  },
-  errorText: {
-    width: '100%',
-    color: '#b00020',
-    marginBottom: 10,
-  },
-  successText: {
-    width: '100%',
-    color: '#1b5e20',
-    marginBottom: 10,
   },
 });
 
