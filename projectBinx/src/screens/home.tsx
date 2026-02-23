@@ -22,6 +22,7 @@ interface Props {
 const Home: React.FC<Props> = ({navigation, route}) => {
   const [loading, setLoading] = useState(true);
   const [polls, setPolls] = useState<PollData[]>([]);
+  const [isSliderInteracting, setIsSliderInteracting] = useState(false);
 
   useEffect(() => {
     fetchPolls();
@@ -55,7 +56,12 @@ const Home: React.FC<Props> = ({navigation, route}) => {
     if (poll.type === 'simple') {
       return <SimplePoll poll={poll} />;
     } else if (poll.type === 'slider') {
-      return <SliderPoll poll={poll} />;
+      return (
+        <SliderPoll
+          poll={poll}
+          onSlidingStateChange={isSliding => setIsSliderInteracting(isSliding)}
+        />
+      );
     } else if (poll.type === 'multi') {
       return <MultiPoll poll={poll} />;
     }
@@ -78,6 +84,9 @@ const Home: React.FC<Props> = ({navigation, route}) => {
         renderItem={({item}) => renderPoll(item)}
         keyExtractor={item => item.pollId!.toString()}
         showsVerticalScrollIndicator={true}
+        scrollEnabled={!isSliderInteracting}
+        nestedScrollEnabled={true}
+        keyboardShouldPersistTaps="handled"
       />
     </View>
   );

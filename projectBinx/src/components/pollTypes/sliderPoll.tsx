@@ -1,5 +1,5 @@
-import React, {useState} from 'react';
-import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import React, {useMemo, useState} from 'react';
+import {PanResponder, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {PollData} from '../../types/pollTypes';
 import PollService from '../../services/pollService';
 import pollStyles from '../../styles/pollStyles';
@@ -7,33 +7,103 @@ import theme from '../../styles/theme';
 
 interface SliderPollProps {
   poll: PollData;
+  onSlidingStateChange?: (isSliding: boolean) => void;
 }
 
-// Basic layout: title, description, options
-const SliderPoll: React.FC<SliderPollProps> = ({poll}) => {
-  const [selected, setSelected] = useState<number | null>(null);
+interface SliderAggregate {
+  total: number;
+  count: number;
+}
+
+const sliderAggregates = new Map<string, SliderAggregate>();
+
+const getPollAggregateKey = (poll: PollData): string =>
+  poll.pollId !== undefined ? String(poll.pollId) : `${poll.user}-${poll.title}`;
+
+const SliderPoll: React.FC<SliderPollProps> = ({poll, onSlidingStateChange}) => {
+  const aggregateKey = getPollAggregateKey(poll);
+  const existingAggregate = sliderAggregates.get(aggregateKey);
+
+  const initialAverage = existingAggregate
+    ? existingAggregate.total / existingAggregate.count
+    : 50;
+
+  const [sliderValue, setSliderValue] = useState<number>(initialAverage);
+  const [averageValue, setAverageValue] = useState<number>(initialAverage);
+  const [responseCount, setResponseCount] = useState<number>(
+    existingAggregate?.count ?? 0,
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [voteError, setVoteError] = useState<string | null>(null);
+  const [sliderTrackWidth, setSliderTrackWidth] = useState(1);
   const optionCount = poll.options.length;
 
-  const sliderIndex = selected ?? Math.floor((optionCount - 1) / 2);
-  const sliderThumbLeftPercent =
-    optionCount > 1 ? (sliderIndex / (optionCount - 1)) * 100 : 0;
+  const lockParentScroll = () => {
+    onSlidingStateChange?.(true);
+  };
 
-  const handleVote = async (optionIndex: number) => {
+  const unlockParentScroll = () => {
+    onSlidingStateChange?.(false);
+  };
+
+  const updateSliderFromLocation = (locationX: number) => {
+    const clampedX = Math.max(0, Math.min(locationX, sliderTrackWidth));
+    const normalizedValue = clampedX / sliderTrackWidth;
+    setSliderValue(Math.round(normalizedValue * 100));
+  };
+
+  const sliderPanResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderGrant: event => {
+          lockParentScroll();
+          updateSliderFromLocation(event.nativeEvent.locationX);
+        },
+        onPanResponderMove: event => {
+          updateSliderFromLocation(event.nativeEvent.locationX);
+        },
+        onPanResponderRelease: () => {
+          unlockParentScroll();
+        },
+        onPanResponderTerminate: () => {
+          unlockParentScroll();
+        },
+      }),
+    [sliderTrackWidth],
+  );
+
+  const handleSubmitVote = async () => {
     if (isSubmitting) {
       return;
     }
 
-    const previousSelection = selected;
+    const previousAverage = averageValue;
+    const previousCount = responseCount;
     setVoteError(null);
-    setSelected(optionIndex);
 
     try {
       setIsSubmitting(true);
-      await PollService.voteById(poll.pollId!, optionIndex);
+
+      if (poll.pollId !== undefined) {
+        await PollService.voteById(poll.pollId, sliderValue);
+      }
+
+      const currentAggregate = sliderAggregates.get(aggregateKey);
+      const nextAggregate = {
+        total: (currentAggregate?.total ?? 0) + sliderValue,
+        count: (currentAggregate?.count ?? 0) + 1,
+      };
+
+      sliderAggregates.set(aggregateKey, nextAggregate);
+
+      const nextAverage = nextAggregate.total / nextAggregate.count;
+      setAverageValue(nextAverage);
+      setResponseCount(nextAggregate.count);
     } catch (error) {
-      setSelected(previousSelection);
+      setAverageValue(previousAverage);
+      setResponseCount(previousCount);
       setVoteError('Unable to submit your vote. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -49,14 +119,22 @@ const SliderPoll: React.FC<SliderPollProps> = ({poll}) => {
       {voteError ? <Text style={pollStyles.errorText}>{voteError}</Text> : null}
 
       <View style={styles.sliderContainer}>
-        <View style={styles.sliderTrack}>
-          <View
-            style={[
-              styles.sliderThumb,
-              {left: `${sliderThumbLeftPercent}%`},
-            ]}
-          />
+        <Text style={styles.sliderValueText}>Your value: {Math.round(sliderValue)}</Text>
+
+        <View
+          style={styles.sliderGestureWrapper}
+          onLayout={event => {
+            const width = event.nativeEvent.layout.width;
+            if (width > 0) {
+              setSliderTrackWidth(width);
+            }
+          }}
+          {...sliderPanResponder.panHandlers}>
+          <View style={styles.sliderTrackBackground} />
+          <View style={[styles.sliderTrackFill, {width: `${sliderValue}%`}]} />
+          <View style={[styles.sliderThumb, {left: `${sliderValue}%`}]} />
         </View>
+
         <View style={styles.sliderLabelsRow}>
           <Text style={styles.sliderEdgeLabel}>{poll.options[0]?.optionText}</Text>
           <Text style={styles.sliderEdgeLabel}>
@@ -65,31 +143,26 @@ const SliderPoll: React.FC<SliderPollProps> = ({poll}) => {
         </View>
       </View>
 
-      <View style={styles.optionsContainer}>
-        {poll.options.map((option, idx) => (
-          <TouchableOpacity
-            key={idx}
-            style={[
-              pollStyles.optionButtonBase,
-              selected === idx
-                ? pollStyles.optionButtonSelected
-                : pollStyles.optionButtonUnselected,
-              isSubmitting ? pollStyles.optionButtonDisabled : null,
-            ]}
-            disabled={isSubmitting}
-            onPress={() => handleVote(idx)}>
-            <View
-              style={[
-                pollStyles.radioOuter,
-                selected === idx
-                  ? pollStyles.radioOuterSelected
-                  : pollStyles.radioOuterUnselected,
-              ]}
-            />
-            <Text style={pollStyles.optionText}>{option.optionText}</Text>
-          </TouchableOpacity>
-        ))}
+      <View style={styles.resultsContainer}>
+        <Text style={styles.averageText}>
+          Average response: {averageValue.toFixed(1)} / 100
+        </Text>
+        <Text style={styles.countText}>
+          Responses counted: {responseCount}
+        </Text>
       </View>
+
+      <TouchableOpacity
+        style={[
+          styles.submitButton,
+          isSubmitting ? styles.submitButtonDisabled : null,
+        ]}
+        disabled={isSubmitting}
+        onPress={handleSubmitVote}>
+        <Text style={styles.submitButtonText}>
+          {isSubmitting ? 'Submitting...' : 'Submit Slider Vote'}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -98,22 +171,41 @@ const styles = StyleSheet.create({
   sliderContainer: {
     marginBottom: theme.spacing.md,
   },
-  sliderTrack: {
+  sliderValueText: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSize.md,
+    marginBottom: theme.spacing.xs,
+  },
+  sliderGestureWrapper: {
+    width: '100%',
+    height: 28,
+    justifyContent: 'center',
+    position: 'relative',
+    marginBottom: theme.spacing.xs,
+  },
+  sliderTrackBackground: {
     height: 6,
     borderRadius: 6,
     backgroundColor: theme.colors.border,
-    position: 'relative',
-    marginTop: theme.spacing.xs,
-    marginBottom: theme.spacing.sm,
+    width: '100%',
+    position: 'absolute',
   },
-  sliderThumb: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+  sliderTrackFill: {
+    height: 6,
+    borderRadius: 6,
     backgroundColor: theme.colors.primary,
     position: 'absolute',
-    top: -6,
-    marginLeft: -9,
+  },
+  sliderThumb: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: theme.colors.primary,
+    borderWidth: 2,
+    borderColor: theme.colors.surface,
+    position: 'absolute',
+    top: 4,
+    marginLeft: -10,
   },
   sliderLabelsRow: {
     flexDirection: 'row',
@@ -123,8 +215,31 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: theme.fontSize.sm,
   },
-  optionsContainer: {
-    alignItems: 'flex-start',
+  resultsContainer: {
+    marginBottom: theme.spacing.md,
+  },
+  averageText: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSize.base,
+    fontWeight: '600',
+    marginBottom: theme.spacing.xs,
+  },
+  countText: {
+    color: theme.colors.textSecondary,
+    fontSize: theme.fontSize.sm,
+  },
+  submitButton: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.radius.sm,
+    paddingVertical: theme.spacing.md,
+    alignItems: 'center',
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
+  },
+  submitButtonText: {
+    color: theme.colors.onPrimary,
+    fontWeight: '600',
   },
 });
 
