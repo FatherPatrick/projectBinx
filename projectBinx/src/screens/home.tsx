@@ -3,7 +3,6 @@ import {ActivityIndicator, FlatList, Text, View} from 'react-native';
 import {RouteProp} from '@react-navigation/native';
 import {BottomTabNavigationProp} from '@react-navigation/bottom-tabs';
 import PollService from '../services/pollService';
-import {mockPolls} from '../data/testData';
 import {PollData} from '../types/pollTypes';
 import SimplePoll from '../components/pollTypes/simplePoll';
 import SliderPoll from '../components/pollTypes/sliderPoll';
@@ -11,8 +10,6 @@ import MultiPoll from '../components/pollTypes/multiPoll';
 import {MainTabParamList} from '../types/navigation';
 import globalStyles from '../styles/globalStyles';
 import theme from '../styles/theme';
-
-const USE_MOCK_POLLS = true;
 
 interface Props {
   navigation: BottomTabNavigationProp<MainTabParamList, 'Home'>;
@@ -41,9 +38,7 @@ const Home: React.FC<Props> = ({navigation, route}) => {
 
   const fetchPolls = async () => {
     try {
-      const fetchedPolls = USE_MOCK_POLLS
-        ? mockPolls
-        : await PollService.getPagedPolls();
+      const fetchedPolls = await PollService.getPagedPolls();
       setPolls(fetchedPolls);
       setLoading(false);
     } catch (error) {

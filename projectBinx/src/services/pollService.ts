@@ -31,9 +31,9 @@ const PollService = {
   },
 
   // Creates a new poll
-  postPoll: async (newPoll: PollData) => {
+  postPoll: async (newPoll: PollData): Promise<PollData> => {
     try {
-      const response = await axios.post(Polls.postPoll, newPoll);
+      const response = await axios.post<PollData>(Polls.postPoll, newPoll);
       return response.data;
     } catch (error) {
       throw toServiceError(error, 'Unable to create poll right now.');

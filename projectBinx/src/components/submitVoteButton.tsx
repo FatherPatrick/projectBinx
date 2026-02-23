@@ -6,11 +6,13 @@ import theme from '../styles/theme';
 interface SubmitVoteButtonProps {
   isSubmitting: boolean;
   onPress: () => void;
+  submittingLabel?: string;
 }
 
 const SubmitVoteButton: React.FC<SubmitVoteButtonProps> = ({
   isSubmitting,
   onPress,
+  submittingLabel = 'Submitting...',
 }) => {
   return (
     <TouchableOpacity
@@ -18,7 +20,7 @@ const SubmitVoteButton: React.FC<SubmitVoteButtonProps> = ({
       disabled={isSubmitting}
       onPress={onPress}>
       <Text style={styles.submitButtonText}>
-        {isSubmitting ? 'Submitting...' : 'Submit Vote'}
+        {isSubmitting ? submittingLabel : 'Submit Vote'}
       </Text>
     </TouchableOpacity>
   );

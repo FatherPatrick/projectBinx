@@ -60,11 +60,11 @@ This starts:
 Set your backend URL in:
 - [src/uri.ts](src/uri.ts)
 
-The app currently uses a placeholder domain and should be updated before real API testing.
+Android emulator default is configured to `http://10.0.2.2:4000/api`.
 
 ## Test Login Credentials
 
-While backend auth is not wired, login uses seeded mock users in `src/data/testData.ts`.
+Backend auth is wired and seeded in Postgres on first startup.
 
 - Phone: `5550001111`
 - Password: `TestPass123!`
@@ -109,7 +109,7 @@ Backend URLs:
 
 ### Core App Wiring
 
-- [ ] Replace placeholder API base URL in [src/uri.ts](src/uri.ts) with real backend URL
+- [x] Replace placeholder API base URL in [src/uri.ts](src/uri.ts) with real backend URL
 - [ ] Add environment-based API configuration for local, staging, and production
 - [ ] Confirm Android and iOS can both reach backend endpoints from device/emulator
 
@@ -122,7 +122,7 @@ Backend URLs:
 
 ### Poll Feed and Voting
 
-- [ ] Replace mock feed mode with real API mode for integration testing
+- [x] Replace mock feed mode with real API mode for integration testing
 - [ ] Confirm vote payload contract with backend (`optionId` vs index)
 - [ ] Add feed empty-state and retry state for failed requests
 - [ ] Fetch and show updated poll results after successful vote
@@ -154,7 +154,7 @@ Backend URLs:
 
 ## Backend Build Plan (From Mock to Real)
 
-This app currently relies on mock test data for parts of auth/feed behavior. The plan below defines how to move to a production-ready backend in controlled phases.
+The app now uses the backend for auth/feed behavior. The plan below tracks hardening work toward production readiness.
 
 ### Phase 0 - Architecture + Contracts
 

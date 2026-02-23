@@ -2,6 +2,7 @@ import React, {useMemo, useRef, useState} from 'react';
 import {PanResponder, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {PollData} from '../../types/pollTypes';
 import PollService from '../../services/pollService';
+import SessionService from '../../services/sessionService';
 import pollStyles from '../../styles/pollStyles';
 import theme from '../../styles/theme';
 import SubmitVoteButton from '../submitVoteButton';
@@ -36,6 +37,7 @@ const SliderPoll: React.FC<SliderPollProps> = ({poll, onSlidingStateChange}) => 
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [voteError, setVoteError] = useState<string | null>(null);
+  const [alreadyVoted, setAlreadyVoted] = useState(false);
   const [sliderTrackWidth, setSliderTrackWidth] = useState(1);
   const dragStartValueRef = useRef(sliderValue);
   const optionCount = poll.options.length;
@@ -84,7 +86,7 @@ const SliderPoll: React.FC<SliderPollProps> = ({poll, onSlidingStateChange}) => 
   );
 
   const handleSubmitVote = async () => {
-    if (isSubmitting) {
+    if (isSubmitting || alreadyVoted) {
       return;
     }
 
@@ -96,7 +98,12 @@ const SliderPoll: React.FC<SliderPollProps> = ({poll, onSlidingStateChange}) => 
       setIsSubmitting(true);
 
       if (poll.pollId !== undefined) {
-        await PollService.voteById(poll.pollId, sliderValue);
+        const voterName =
+          SessionService.getCurrentUser()?.username ?? 'anonymous_user';
+        await PollService.voteById(poll.pollId, {
+          value: sliderValue,
+          voterName,
+        });
       }
 
       const currentAggregate = sliderAggregates.get(aggregateKey);
@@ -111,9 +118,16 @@ const SliderPoll: React.FC<SliderPollProps> = ({poll, onSlidingStateChange}) => 
       setAverageValue(nextAverage);
       setResponseCount(nextAggregate.count);
     } catch (error) {
+      if (error instanceof Error && error.message.includes('already voted')) {
+        setAlreadyVoted(true);
+      }
       setAverageValue(previousAverage);
       setResponseCount(previousCount);
-      setVoteError('Unable to submit your vote. Please try again.');
+      setVoteError(
+        error instanceof Error
+          ? error.message
+          : 'Unable to submit your vote. Please try again.',
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -162,7 +176,8 @@ const SliderPoll: React.FC<SliderPollProps> = ({poll, onSlidingStateChange}) => 
       </View>
 
       <SubmitVoteButton
-        isSubmitting={isSubmitting}
+        isSubmitting={isSubmitting || alreadyVoted}
+        submittingLabel={alreadyVoted ? 'Already Voted' : 'Submitting...'}
         onPress={handleSubmitVote}
       />
     </View>

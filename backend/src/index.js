@@ -4,16 +4,26 @@ const express = require('express');
 const cors = require('cors');
 const swaggerUi = require('swagger-ui-express');
 const {swaggerSpec} = require('./swagger');
-const {checkDbHealth} = require('./db');
+const {
+  checkDbHealth,
+  ensureAuthSchema,
+  ensurePollSchema,
+  seedDefaultPolls,
+  seedDefaultUsers,
+} = require('./db');
+const authRoutes = require('./routes/authRoutes');
+const pollRoutes = require('./routes/pollRoutes');
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({strict: false}));
+app.use('/api', authRoutes);
+app.use('/api', pollRoutes);
 
 /**
- * @openapi
+ * @swagger
  * /health:
  *   get:
  *     tags:
@@ -32,7 +42,7 @@ app.get('/health', (_req, res) => {
 });
 
 /**
- * @openapi
+ * @swagger
  * /health/db:
  *   get:
  *     tags:
@@ -63,7 +73,21 @@ app.get('/health/db', async (_req, res) => {
 
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-app.listen(port, () => {
-  console.log(`Backend API listening on http://localhost:${port}`);
-  console.log(`Swagger docs available at http://localhost:${port}/docs`);
-});
+const startServer = async () => {
+  try {
+    await ensureAuthSchema();
+    await ensurePollSchema();
+    await seedDefaultUsers();
+    await seedDefaultPolls();
+
+    app.listen(port, () => {
+      console.log(`Backend API listening on http://localhost:${port}`);
+      console.log(`Swagger docs available at http://localhost:${port}/docs`);
+    });
+  } catch (error) {
+    console.error('Failed to initialize backend:', error);
+    process.exit(1);
+  }
+};
+
+startServer();

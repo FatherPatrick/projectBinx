@@ -2,6 +2,7 @@ import React, {useState} from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {PollData} from '../../types/pollTypes';
 import PollService from '../../services/pollService';
+import SessionService from '../../services/sessionService';
 import pollStyles from '../../styles/pollStyles';
 import SubmitVoteButton from '../submitVoteButton';
 import theme from '../../styles/theme';
@@ -14,6 +15,7 @@ const MultiPoll: React.FC<MultiPollProps> = ({poll}) => {
   const [selected, setSelected] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [voteError, setVoteError] = useState<string | null>(null);
+  const [alreadyVoted, setAlreadyVoted] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [votePercentages, setVotePercentages] = useState<Record<number, number>>(
     {},
@@ -71,7 +73,7 @@ const MultiPoll: React.FC<MultiPollProps> = ({poll}) => {
   };
 
   const handleOptionSelect = (optionIndex: number) => {
-    if (isSubmitting) {
+    if (isSubmitting || alreadyVoted) {
       return;
     }
 
@@ -80,15 +82,28 @@ const MultiPoll: React.FC<MultiPollProps> = ({poll}) => {
   };
 
   const handleSubmitVote = async () => {
-    if (isSubmitting || selected === null) {
+    if (isSubmitting || selected === null || alreadyVoted) {
       return;
     }
 
     try {
       setIsSubmitting(true);
-      await PollService.voteById(poll.pollId!, selected);
+      const selectedOptionId = poll.options[selected]?.optionId ?? selected;
+      const voterName =
+        SessionService.getCurrentUser()?.username ?? 'anonymous_user';
+      await PollService.voteById(poll.pollId!, {
+        optionId: selectedOptionId,
+        voterName,
+      });
     } catch (error) {
-      setVoteError('Unable to submit your vote. Please try again.');
+      if (error instanceof Error && error.message.includes('already voted')) {
+        setAlreadyVoted(true);
+      }
+      setVoteError(
+        error instanceof Error
+          ? error.message
+          : 'Unable to submit your vote. Please try again.',
+      );
       return;
     } finally {
       setIsSubmitting(false);
@@ -142,7 +157,8 @@ const MultiPoll: React.FC<MultiPollProps> = ({poll}) => {
 
       {selected !== null ? (
         <SubmitVoteButton
-          isSubmitting={isSubmitting}
+          isSubmitting={isSubmitting || alreadyVoted}
+          submittingLabel={alreadyVoted ? 'Already Voted' : 'Submitting...'}
           onPress={handleSubmitVote}
         />
       ) : null}

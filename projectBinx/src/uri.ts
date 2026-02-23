@@ -1,4 +1,4 @@
-export const API_BASE_URL = 'https://your-api-domain.com/api';
+export const API_BASE_URL = 'http://10.0.2.2:4000/api';
 
 export const Polls = {
   getPagedPolls: `${API_BASE_URL}/poll/paged`,

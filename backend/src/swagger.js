@@ -2,7 +2,7 @@ const swaggerJsdoc = require('swagger-jsdoc');
 
 const swaggerOptions = {
   definition: {
-    openapi: '3.0.0',
+    swagger: '2.0',
     info: {
       title: 'projectBinx API',
       version: '1.0.0',
@@ -15,7 +15,7 @@ const swaggerOptions = {
       },
     ],
   },
-  apis: ['./src/index.js'],
+  apis: ['./src/**/*.js'],
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);

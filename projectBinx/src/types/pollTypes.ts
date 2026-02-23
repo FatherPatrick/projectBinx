@@ -8,7 +8,10 @@ export interface PollQueryParams {
 }
 
 export interface VoteRequest {
-  optionId: number;
+  optionId?: number;
+  value?: number;
+  sliderValue?: number;
+  voterName?: string;
 }
 
 export interface PollData {

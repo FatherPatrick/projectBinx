@@ -8,12 +8,9 @@ import {
 } from 'react-native';
 import PollService from '../services/pollService';
 import SessionService from '../services/sessionService';
-import {mockPolls} from '../data/testData';
 import {PollData} from '../types/pollTypes';
 import globalStyles from '../styles/globalStyles';
 import theme from '../styles/theme';
-
-const USE_MOCK_POLLS = true;
 
 const Profile = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -44,9 +41,7 @@ const Profile = () => {
 
       try {
         setErrorMessage(null);
-        const fetchedPolls = USE_MOCK_POLLS
-          ? mockPolls
-          : await PollService.getPagedPolls({user: username});
+        const fetchedPolls = await PollService.getPagedPolls({user: username});
 
         const userPolls = fetchedPolls.filter(
           poll => poll.user.toLowerCase() === username.toLowerCase(),

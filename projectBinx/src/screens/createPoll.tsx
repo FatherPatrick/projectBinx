@@ -277,9 +277,9 @@ const CreatePoll: React.FC<Props> = ({navigation}) => {
     try {
       setErrorMessage(null);
       setIsSubmitting(true);
-      await PollService.postPoll(newPoll);
+      const createdPoll = await PollService.postPoll(newPoll);
       Alert.alert('Success', `${pollType} poll created.`);
-      navigation.navigate('Home', {createdPoll: newPoll});
+      navigation.navigate('Home', {createdPoll});
     } catch (error) {
       setErrorMessage('Unable to create poll right now. Please try again.');
     } finally {

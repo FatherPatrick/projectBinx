@@ -3,8 +3,14 @@
   "private": true,
   "scripts": {
     "dev:backend": "npm --prefix backend run dev",
-    "dev:android": "npm --prefix projectBinx run android",
-    "dev:all": "concurrently -n backend,android -c cyan,magenta \"npm run dev:backend\" \"npm run dev:android\""
+    "dev:metro": "npm --prefix projectBinx run start",
+    "dev:android": "npm --prefix projectBinx run android -- --no-packager",
+    "dev:all": "concurrently -n backend,android -c cyan,magenta \"npm run dev:backend\" \"npm run dev:android\"",
+    "start:all": "node scripts/start-all.js",
+    "stack:up": "docker compose up -d db backend",
+    "stack:down": "docker compose down",
+    "stack:logs": "docker compose logs -f db backend",
+    "db:reset": "docker compose down -v && docker compose up -d --build db backend"
   },
   "dependencies": {
     "@react-native-vector-icons/ionicons": "^12.3.0",

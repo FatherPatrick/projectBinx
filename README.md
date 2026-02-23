@@ -63,6 +63,61 @@ npm run android
 npm run ios
 ```
 
+## Local Backend + DB (Recommended)
+
+For a lightweight test setup that is also deployment-friendly, use Docker Compose.
+
+For full startup (DB + backend + Android app) with one command:
+
+```bash
+npm run start:all
+```
+
+This command starts stack + Metro + Android in one console stream with prefixed logs (including live backend logs) and suppresses extra Windows console popups.
+
+If no device is connected, it auto-starts an emulator. Optionally choose which AVD to boot:
+
+```bash
+set ANDROID_AVD_NAME=Your_AVD_Name
+npm run start:all
+```
+
+From repository root:
+
+```bash
+# starts PostgreSQL + backend API
+npm run stack:up
+```
+
+View logs:
+
+```bash
+npm run stack:logs
+```
+
+Stop services:
+
+```bash
+npm run stack:down
+```
+
+Reset DB (wipe volume and reseed):
+
+```bash
+npm run db:reset
+```
+
+### Environment
+
+Backend DB settings are read from environment variables. For local compose defaults:
+
+- `DB_NAME=projectbinx`
+- `DB_USER=postgres`
+- `DB_PASSWORD=postgres`
+- `DB_PORT=5432`
+
+You can customize these by creating a root `.env` file before running `npm run stack:up`.
+
 ## API Configuration
 
 Update base URLs before testing live API calls:
