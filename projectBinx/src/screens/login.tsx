@@ -60,7 +60,7 @@ const LoginScreen: React.FC<Props> = ({navigation}) => {
     try {
       setLoading(true);
       await LoginService.tryLogin(credentials);
-      navigation.navigate('Home');
+      navigation.navigate('MainTabs', {screen: 'Home'});
     } catch (error) {
       setErrorMessage('Login failed. Please check your credentials.');
     } finally {
@@ -74,6 +74,12 @@ const LoginScreen: React.FC<Props> = ({navigation}) => {
 
   const handleNewAcc = () => {
     navigation.navigate('CreateAccount');
+  };
+
+  const handleUseTestAccount = () => {
+    setPhoneNumber('5550001111');
+    setPassword('TestPass123!');
+    setErrorMessage(null);
   };
 
   return (
@@ -103,6 +109,9 @@ const LoginScreen: React.FC<Props> = ({navigation}) => {
           }
         }}
       />
+      <TouchableOpacity onPress={handleUseTestAccount}>
+        <Text style={styles.testAccount}>Use Test Account</Text>
+      </TouchableOpacity>
       {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
       <Button title={loading ? 'Logging in...' : 'Login'} onPress={handleLogin} disabled={loading} />
       <TouchableOpacity onPress={handleForgotPassword}>
@@ -138,6 +147,12 @@ const styles = StyleSheet.create({
   forgotPassword: {
     marginTop: 10,
     color: 'blue',
+    textDecorationLine: 'underline',
+  },
+  testAccount: {
+    alignSelf: 'flex-start',
+    marginBottom: 10,
+    color: '#6a1b9a',
     textDecorationLine: 'underline',
   },
   createAccount: {

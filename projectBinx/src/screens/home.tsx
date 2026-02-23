@@ -4,24 +4,23 @@ import {
   FlatList,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import {RouteProp} from '@react-navigation/native';
-import {StackNavigationProp} from '@react-navigation/stack';
+import {BottomTabNavigationProp} from '@react-navigation/bottom-tabs';
 import PollService from '../services/pollService';
 import {mockPolls} from '../data/testData';
 import {PollData} from '../types/pollTypes';
 import SimplePoll from '../components/pollTypes/simplePoll';
 import SliderPoll from '../components/pollTypes/sliderPoll';
 import MultiPoll from '../components/pollTypes/multiPoll';
-import {RootStackParamList} from '../types/navigation';
+import {MainTabParamList} from '../types/navigation';
 
 const USE_MOCK_POLLS = true;
 
 interface Props {
-  navigation: StackNavigationProp<RootStackParamList, 'Home'>;
-  route: RouteProp<RootStackParamList, 'Home'>;
+  navigation: BottomTabNavigationProp<MainTabParamList, 'Home'>;
+  route: RouteProp<MainTabParamList, 'Home'>;
 }
 
 const Home: React.FC<Props> = ({navigation, route}) => {
@@ -78,11 +77,6 @@ const Home: React.FC<Props> = ({navigation, route}) => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Polls</Text>
-      <TouchableOpacity
-        style={styles.createButton}
-        onPress={() => navigation.navigate('CreatePoll')}>
-        <Text style={styles.createButtonText}>Create Poll</Text>
-      </TouchableOpacity>
       <FlatList
         data={polls}
         renderItem={({item}) => renderPoll(item)}

@@ -49,6 +49,16 @@ Set your backend URL in:
 
 The app currently uses a placeholder domain and should be updated before real API testing.
 
+## Test Login Credentials
+
+While backend auth is not wired, login uses seeded mock users in `src/data/testData.ts`.
+
+- Phone: `5550001111`
+- Password: `TestPass123!`
+
+- Phone: `5550002222`
+- Password: `PollsRock456!`
+
 ## Scripts
 
 - `npm start` - start Metro bundler

@@ -10,13 +10,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {StackNavigationProp} from '@react-navigation/stack';
+import {BottomTabNavigationProp} from '@react-navigation/bottom-tabs';
 import PollService from '../services/pollService';
-import {RootStackParamList} from '../types/navigation';
+import {MainTabParamList} from '../types/navigation';
 import {PollData, PollType} from '../types/pollTypes';
 
 interface Props {
-  navigation: StackNavigationProp<RootStackParamList, 'CreatePoll'>;
+  navigation: BottomTabNavigationProp<MainTabParamList, 'CreatePoll'>;
 }
 
 const MAX_OPTIONS = 10;

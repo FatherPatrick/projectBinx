@@ -1,5 +1,27 @@
 import {PollData, Results} from '../types/pollTypes';
 
+export interface TestAuthUser {
+  id: number;
+  phoneNumber: string;
+  password: string;
+  displayName: string;
+}
+
+export const testAuthUsers: TestAuthUser[] = [
+  {
+    id: 1,
+    phoneNumber: '5550001111',
+    password: 'TestPass123!',
+    displayName: 'QA Demo User',
+  },
+  {
+    id: 2,
+    phoneNumber: '5550002222',
+    password: 'PollsRock456!',
+    displayName: 'Poll Tester',
+  },
+];
+
 export const testPolls: PollData[] = [
   {
     pollId: 1,

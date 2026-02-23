@@ -1,6 +1,7 @@
 import axios from 'axios';
 import {API_BASE_URL} from '../uri';
 import {toServiceError} from './serviceError';
+import {testAuthUsers} from '../data/testData';
 import {
   CreateAccountResponse,
   ForgotPasswordResponse,
@@ -13,9 +14,44 @@ export interface Credentials {
   deviceId: string;
 }
 
+const PLACEHOLDER_API_BASE_URL = 'https://your-api-domain.com/api';
+const USE_MOCK_AUTH = true;
+
+const shouldUseMockAuth =
+  USE_MOCK_AUTH || API_BASE_URL === PLACEHOLDER_API_BASE_URL;
+
+const tryMockLogin = (login: Credentials): LoginResponse => {
+  const trimmedPhone = login.phoneNumber.trim();
+  const matchingUser = testAuthUsers.find(
+    user =>
+      user.phoneNumber === trimmedPhone &&
+      user.password === (login.password ?? ''),
+  );
+
+  if (!matchingUser) {
+    throw new Error('Invalid credentials');
+  }
+
+  return {
+    success: true,
+    message: 'Login successful',
+    token: `mock-token-${matchingUser.id}`,
+    refreshToken: `mock-refresh-${matchingUser.id}`,
+    user: {
+      id: matchingUser.id,
+      phoneNumber: matchingUser.phoneNumber,
+      displayName: matchingUser.displayName,
+    },
+  };
+};
+
 const LoginService = {
   // Verify user
   tryLogin: async (login: Credentials): Promise<LoginResponse> => {
+    if (shouldUseMockAuth) {
+      return tryMockLogin(login);
+    }
+
     try {
       const response = await axios.post<LoginResponse>(
         `${API_BASE_URL}/login`,
