@@ -35,6 +35,19 @@ npm run android
 npm run ios
 ```
 
+## One-Command Full Startup (Backend + Android)
+
+From the repository root (`projectBinx/`), run:
+
+```bash
+npm run dev:all
+```
+
+This starts:
+
+- backend API (`backend` service in dev mode)
+- React Native Android app launch (`projectBinx` app)
+
 ## Windows Android Notes
 
 - Android builds use JDK 17.
@@ -66,6 +79,31 @@ While backend auth is not wired, login uses seeded mock users in `src/data/testD
 - `npm run ios` - run iOS app
 - `npm test` - run Jest tests
 - `npm run lint` - run ESLint
+
+## Backend Foundation (Implemented)
+
+Backend scaffolding now exists in [../backend](../backend) with the requested stack:
+
+- Node.js + Express API
+- PostgreSQL connection via `pg`
+- Swagger UI docs via `swagger-ui-express` + `swagger-jsdoc`
+
+### Run Backend Locally
+
+From the repository root:
+
+```bash
+cd backend
+npm install
+cp .env.example .env
+npm run dev
+```
+
+Backend URLs:
+
+- API health: `http://localhost:4000/health`
+- DB health: `http://localhost:4000/health/db`
+- Swagger docs: `http://localhost:4000/docs`
 
 ## Working Order TODO
 
@@ -113,3 +151,104 @@ While backend auth is not wired, login uses seeded mock users in `src/data/testD
 - [ ] Implement score persistence and `-5` auto-delete backend logic
 - [ ] Add location-based feed filtering/geofencing
 - [ ] Add anti-spam and anti-abuse protections
+
+## Backend Build Plan (From Mock to Real)
+
+This app currently relies on mock test data for parts of auth/feed behavior. The plan below defines how to move to a production-ready backend in controlled phases.
+
+### Phase 0 - Architecture + Contracts
+
+- [x] Choose backend stack and deployment target (Node + Postgres selected)
+- [ ] Define environments: local, staging, production
+- [x] Publish API contract (Swagger foundation + docs endpoint created)
+- [ ] Lock vote payload contract (index vs optionId, slider value range, multi-select shape)
+
+### Phase 1 - Data Model + Persistence
+
+- [ ] Create core tables/collections:
+	- users
+	- sessions/tokens
+	- polls
+	- poll_options
+	- poll_votes
+	- poll_results_aggregate (or query strategy)
+	- moderation_events
+- [ ] Add migrations and seed scripts for local/staging data
+- [ ] Enforce constraints (unique vote per user+poll, valid option references, soft/hard delete rules)
+
+### Phase 2 - Authentication + Session
+
+- [ ] Implement endpoints:
+	- `POST /login`
+	- `POST /login/new`
+	- `POST /login/forgot`
+	- `POST /logout` (new)
+	- `GET /session/me` (new)
+- [ ] Add secure token lifecycle (access + refresh token)
+- [ ] Add request auth middleware and protected route checks
+
+### Phase 3 - Poll CRUD + Feed
+
+- [ ] Implement endpoints:
+	- `GET /poll/paged`
+	- `POST /poll`
+	- `PUT /poll/update/:id`
+	- `DELETE /poll/delete/:id`
+- [ ] Support feed filters:
+	- pagination
+	- poll type
+	- user
+	- (future) location scope
+- [ ] Return stable IDs for polls and options required by vote/results calls
+
+### Phase 4 - Voting + Results
+
+- [ ] Implement vote endpoint with poll-type-specific validation:
+	- simple: single selection
+	- multi: multi-select shape (if enabled)
+	- slider: numeric range (0-100)
+- [ ] Implement results endpoint:
+	- `GET /poll/results/:id`
+- [ ] Return normalized result shape usable by UI:
+	- per-option vote counts
+	- percentages
+	- totals
+	- slider average
+
+### Phase 5 - Moderation + Safety Rules
+
+- [ ] Persist score changes and moderation history
+- [ ] Auto-delete poll when score reaches `-5`
+- [ ] Add baseline anti-abuse controls:
+	- rate limiting
+	- duplicate vote protection
+	- request validation + input sanitation
+
+### Phase 6 - Ops + Reliability
+
+- [ ] Add centralized logging and request tracing
+- [ ] Add health/readiness endpoints
+- [ ] Add CI pipeline checks:
+	- lint
+	- unit tests
+	- migration verification
+- [ ] Add backup/restore and incident playbook
+
+### Frontend Integration Order
+
+- [ ] Turn off mock auth mode in [src/services/loginService.ts](src/services/loginService.ts)
+- [ ] Turn off mock polls mode in [src/screens/home.tsx](src/screens/home.tsx) and [src/screens/profile.tsx](src/screens/profile.tsx)
+- [ ] Point [src/uri.ts](src/uri.ts) to environment-specific backend URLs
+- [ ] Validate end-to-end flows:
+	- login/logout/session restore
+	- create poll
+	- vote + submit
+	- post-vote percentages
+	- slider average updates
+
+### Definition of Done (Backend MVP)
+
+- [ ] No mock data paths required for auth/feed/voting
+- [ ] Poll creation and voting persist correctly across app restarts/devices
+- [ ] Results endpoint returns values needed for simple/multi percentage UI and slider average UI
+- [ ] Moderation rule (`-5` delete) enforced server-side

@@ -1,8 +1,16 @@
 {
   "name": "projectbinx-root",
   "private": true,
+  "scripts": {
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:android": "npm --prefix projectBinx run android",
+    "dev:all": "concurrently -n backend,android -c cyan,magenta \"npm run dev:backend\" \"npm run dev:android\""
+  },
   "dependencies": {
     "@react-native-vector-icons/ionicons": "^12.3.0",
     "react-native-vector-icons": "^10.3.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }
