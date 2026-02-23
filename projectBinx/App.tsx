@@ -1,6 +1,7 @@
 import {NavigationContainer} from '@react-navigation/native';
 import React from 'react';
-import {StyleSheet, Text} from 'react-native';
+import {StyleSheet} from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import LoginScreen from './src/screens/login';
 import Home from './src/screens/home';
 import {createStackNavigator} from '@react-navigation/stack';
@@ -10,21 +11,43 @@ import {MainTabParamList, RootStackParamList} from './src/types/navigation';
 import CreatePoll from './src/screens/createPoll';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import Profile from './src/screens/profile';
-import theme from './src/styles/theme';
 
 const Stack = createStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-const renderTabIcon = (routeName: keyof MainTabParamList, color: string) => {
+const renderTabIcon = (
+  routeName: keyof MainTabParamList,
+  color: string,
+  size: number,
+  focused: boolean,
+) => {
   if (routeName === 'CreatePoll') {
-    return <Text style={[styles.createIcon, {color}]}>+</Text>;
+    return (
+      <Ionicons
+        name={focused ? 'add-circle' : 'add-circle-outline'}
+        color={color}
+        size={size + 2}
+      />
+    );
   }
 
   if (routeName === 'Home') {
-    return <Text style={[styles.tabIconLabel, {color}]}>Home</Text>;
+    return (
+      <Ionicons
+        name={focused ? 'home' : 'home-outline'}
+        color={color}
+        size={size}
+      />
+    );
   }
 
-  return <Text style={[styles.tabIconLabel, {color}]}>Profile</Text>;
+  return (
+    <Ionicons
+      name={focused ? 'person' : 'person-outline'}
+      color={color}
+      size={size}
+    />
+  );
 };
 
 const MainTabs = () => {
@@ -32,7 +55,10 @@ const MainTabs = () => {
     <Tab.Navigator
       screenOptions={({route}) => ({
         headerShown: false,
-        tabBarIcon: ({color}) => renderTabIcon(route.name, color),
+        tabBarShowLabel: true,
+        tabBarLabelStyle: styles.tabLabel,
+        tabBarIcon: ({color, size, focused}) =>
+          renderTabIcon(route.name, color, size, focused),
       })}>
       <Tab.Screen
         name="Home"
@@ -42,7 +68,7 @@ const MainTabs = () => {
       <Tab.Screen
         name="CreatePoll"
         component={CreatePoll}
-        options={{tabBarLabel: 'Create', title: 'Create Poll'}}
+        options={{tabBarLabel: () => null, title: 'Create Poll'}}
       />
       <Tab.Screen
         name="Profile"
@@ -71,11 +97,9 @@ function App(): React.JSX.Element {
 }
 
 const styles = StyleSheet.create({
-  createIcon: {
-    fontSize: theme.fontSize.xxl,
-  },
-  tabIconLabel: {
-    fontSize: theme.fontSize.md,
+  tabLabel: {
+    fontSize: 10,
+    marginBottom: 2,
   },
 });
 
