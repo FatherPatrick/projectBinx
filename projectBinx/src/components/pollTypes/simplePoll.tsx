@@ -4,6 +4,7 @@ import {PollData} from '../../types/pollTypes';
 import PollService from '../../services/pollService';
 import pollStyles from '../../styles/pollStyles';
 import theme from '../../styles/theme';
+import SubmitVoteButton from '../submitVoteButton';
 
 interface SimplePollProps {
   poll: PollData;
@@ -13,24 +14,97 @@ const SimplePoll: React.FC<SimplePollProps> = ({poll}) => {
   const [selected, setSelected] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [voteError, setVoteError] = useState<string | null>(null);
+  const [showResults, setShowResults] = useState(false);
+  const [votePercentages, setVotePercentages] = useState<
+    Record<number, number>
+  >({});
 
-  const handleVote = async (optionIndex: number) => {
+  const getMatchingVotesForOption = (
+    optionIndex: number,
+    optionVotes: Record<number, number>,
+  ) => {
+    const pollOption = poll.options[optionIndex];
+    const idCandidates = [
+      pollOption.optionId,
+      pollOption.optionTypeId,
+      optionIndex,
+      optionIndex + 1,
+    ].filter((value): value is number => value !== undefined);
+
+    return idCandidates.reduce((maxVotes, candidate) => {
+      const candidateVotes = optionVotes[candidate] ?? 0;
+      return Math.max(maxVotes, candidateVotes);
+    }, 0);
+  };
+
+  const fetchVotePercentages = async () => {
+    if (poll.pollId === undefined) {
+      return;
+    }
+
+    const results = await PollService.getPollResultsById(poll.pollId);
+    const optionVotes = results.reduce<Record<number, number>>(
+      (acc, result) => {
+        acc[result.optionId] = (acc[result.optionId] ?? 0) + result.votes;
+        return acc;
+      },
+      {},
+    );
+
+    const votesPerOption = poll.options.map((_, index) =>
+      getMatchingVotesForOption(index, optionVotes),
+    );
+    const totalVotes = votesPerOption.reduce((sum, votes) => sum + votes, 0);
+
+    const nextPercentages = votesPerOption.reduce<Record<number, number>>(
+      (acc, votes, index) => {
+        acc[index] = totalVotes > 0 ? (votes / totalVotes) * 100 : 0;
+        return acc;
+      },
+      {},
+    );
+
+    setVotePercentages(nextPercentages);
+  };
+
+  const getPercentageLabel = (optionIndex: number) => {
+    if (!showResults) {
+      return null;
+    }
+
+    const percentage = votePercentages[optionIndex] ?? 0;
+    return `${Math.round(percentage)}%`;
+  };
+
+  const handleOptionSelect = (optionIndex: number) => {
     if (isSubmitting) {
       return;
     }
 
-    const previousSelection = selected;
     setVoteError(null);
     setSelected(optionIndex);
+  };
+
+  const handleSubmitVote = async () => {
+    if (isSubmitting || selected === null) {
+      return;
+    }
 
     try {
       setIsSubmitting(true);
-      await PollService.voteById(poll.pollId!, optionIndex);
+      await PollService.voteById(poll.pollId!, selected);
     } catch (error) {
-      setSelected(previousSelection);
       setVoteError('Unable to submit your vote. Please try again.');
+      return;
     } finally {
       setIsSubmitting(false);
+    }
+
+    setShowResults(true);
+    try {
+      await fetchVotePercentages();
+    } catch (error) {
+      setVotePercentages({});
     }
   };
 
@@ -55,19 +129,32 @@ const SimplePoll: React.FC<SimplePollProps> = ({poll}) => {
             selected === idx
               ? styles.binaryOptionButtonSelected
               : styles.binaryOptionButtonUnselected,
-            isSubmitting ? styles.optionButtonDisabled : null,
+            isSubmitting ? pollStyles.optionButtonDisabled : null,
           ]}
           disabled={isSubmitting}
-          onPress={() => handleVote(idx)}>
-          <Text
-            style={[
-              styles.binaryOptionText,
-              selected === idx
-                ? styles.binaryOptionTextSelected
-                : styles.binaryOptionTextUnselected,
-            ]}>
-            {option.optionText}
-          </Text>
+          onPress={() => handleOptionSelect(idx)}>
+          <View style={styles.binaryOptionContent}>
+            <Text
+              style={[
+                styles.binaryOptionText,
+                selected === idx
+                  ? styles.binaryOptionTextSelected
+                  : styles.binaryOptionTextUnselected,
+              ]}>
+              {option.optionText}
+            </Text>
+            {showResults ? (
+              <Text
+                style={[
+                  styles.binaryOptionPercentage,
+                  selected === idx
+                    ? styles.binaryOptionTextSelected
+                    : styles.binaryOptionTextUnselected,
+                ]}>
+                {getPercentageLabel(idx)}
+              </Text>
+            ) : null}
+          </View>
         </TouchableOpacity>
       ))}
     </View>
@@ -86,7 +173,7 @@ const SimplePoll: React.FC<SimplePollProps> = ({poll}) => {
             isSubmitting ? pollStyles.optionButtonDisabled : null,
           ]}
           disabled={isSubmitting}
-          onPress={() => handleVote(idx)}>
+          onPress={() => handleOptionSelect(idx)}>
           <View
             style={[
               pollStyles.radioOuter,
@@ -97,6 +184,11 @@ const SimplePoll: React.FC<SimplePollProps> = ({poll}) => {
             {selected === idx && <View style={pollStyles.radioInner} />}
           </View>
           <Text style={pollStyles.optionText}>{option.optionText}</Text>
+          {showResults ? (
+            <Text style={styles.optionPercentageText}>
+              {getPercentageLabel(idx)}
+            </Text>
+          ) : null}
         </TouchableOpacity>
       ))}
     </View>
@@ -111,6 +203,13 @@ const SimplePoll: React.FC<SimplePollProps> = ({poll}) => {
       {voteError ? <Text style={pollStyles.errorText}>{voteError}</Text> : null}
 
       {isYesNo || isUpDown ? renderBinaryOptions() : renderListOptions()}
+
+      {selected !== null ? (
+        <SubmitVoteButton
+          isSubmitting={isSubmitting}
+          onPress={handleSubmitVote}
+        />
+      ) : null}
     </View>
   );
 };
@@ -126,6 +225,11 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     borderWidth: 2,
+    alignItems: 'stretch',
+  },
+  binaryOptionContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
   binaryOptionButtonSelected: {
@@ -146,8 +250,17 @@ const styles = StyleSheet.create({
   binaryOptionTextUnselected: {
     color: theme.colors.textPrimary,
   },
+  binaryOptionPercentage: {
+    marginLeft: theme.spacing.sm,
+    fontWeight: '600',
+  },
   listOptionsContainer: {
     alignItems: 'flex-start',
+  },
+  optionPercentageText: {
+    marginLeft: 'auto',
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
   },
 });
 

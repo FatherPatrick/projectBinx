@@ -1,9 +1,10 @@
-import React, {useMemo, useState} from 'react';
+import React, {useMemo, useRef, useState} from 'react';
 import {PanResponder, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {PollData} from '../../types/pollTypes';
 import PollService from '../../services/pollService';
 import pollStyles from '../../styles/pollStyles';
 import theme from '../../styles/theme';
+import SubmitVoteButton from '../submitVoteButton';
 
 interface SliderPollProps {
   poll: PollData;
@@ -36,6 +37,7 @@ const SliderPoll: React.FC<SliderPollProps> = ({poll, onSlidingStateChange}) => 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [voteError, setVoteError] = useState<string | null>(null);
   const [sliderTrackWidth, setSliderTrackWidth] = useState(1);
+  const dragStartValueRef = useRef(sliderValue);
   const optionCount = poll.options.length;
 
   const lockParentScroll = () => {
@@ -52,17 +54,24 @@ const SliderPoll: React.FC<SliderPollProps> = ({poll, onSlidingStateChange}) => 
     setSliderValue(Math.round(normalizedValue * 100));
   };
 
+  const getClampedValue = (value: number) =>
+    Math.max(0, Math.min(100, Math.round(value)));
+
   const sliderPanResponder = useMemo(
     () =>
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: (_, gestureState) =>
+          Math.abs(gestureState.dx) > 1,
         onPanResponderGrant: event => {
           lockParentScroll();
+          dragStartValueRef.current = sliderValue;
           updateSliderFromLocation(event.nativeEvent.locationX);
         },
-        onPanResponderMove: event => {
-          updateSliderFromLocation(event.nativeEvent.locationX);
+        onPanResponderMove: (_, gestureState) => {
+          const deltaValue = (gestureState.dx / sliderTrackWidth) * 100;
+          const nextValue = getClampedValue(dragStartValueRef.current + deltaValue);
+          setSliderValue(nextValue);
         },
         onPanResponderRelease: () => {
           unlockParentScroll();
@@ -152,17 +161,10 @@ const SliderPoll: React.FC<SliderPollProps> = ({poll, onSlidingStateChange}) => 
         </Text>
       </View>
 
-      <TouchableOpacity
-        style={[
-          styles.submitButton,
-          isSubmitting ? styles.submitButtonDisabled : null,
-        ]}
-        disabled={isSubmitting}
-        onPress={handleSubmitVote}>
-        <Text style={styles.submitButtonText}>
-          {isSubmitting ? 'Submitting...' : 'Submit Slider Vote'}
-        </Text>
-      </TouchableOpacity>
+      <SubmitVoteButton
+        isSubmitting={isSubmitting}
+        onPress={handleSubmitVote}
+      />
     </View>
   );
 };
@@ -227,19 +229,6 @@ const styles = StyleSheet.create({
   countText: {
     color: theme.colors.textSecondary,
     fontSize: theme.fontSize.sm,
-  },
-  submitButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.radius.sm,
-    paddingVertical: theme.spacing.md,
-    alignItems: 'center',
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    color: theme.colors.onPrimary,
-    fontWeight: '600',
   },
 });
 
