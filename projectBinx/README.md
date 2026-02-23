@@ -35,6 +35,13 @@ npm run android
 npm run ios
 ```
 
+## Windows Android Notes
+
+- Android builds use JDK 17.
+- This project pins Gradle Java in [android/gradle.properties](android/gradle.properties) via `org.gradle.java.home`, so you should not need to set `JAVA_HOME` manually each run.
+- If you recently changed system environment variables, fully restart VS Code/terminals once so new sessions pick them up.
+- If Android Studio is open, ensure the SDK is installed and an emulator is created/started in Device Manager.
+
 ## Configure API Endpoints
 
 Set your backend URL in:
