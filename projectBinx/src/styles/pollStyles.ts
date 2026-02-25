@@ -71,6 +71,53 @@ const pollStyles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: theme.colors.surface,
   },
+  commentsButton: {
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.sm,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.sm,
+    backgroundColor: theme.colors.surface,
+  },
+  actionRow: {
+    marginTop: theme.spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+  },
+  iconActionButton: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.sm,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.sm,
+    backgroundColor: theme.colors.surface,
+    marginRight: theme.spacing.xs,
+  },
+  iconActionButtonActive: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryTint,
+  },
+  commentsButtonText: {
+    color: theme.colors.textSecondary,
+    fontSize: theme.fontSize.sm,
+    fontWeight: '600',
+  },
+  moreButton: {
+    position: 'absolute',
+    top: 0,
+    right: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.xs,
+    paddingVertical: theme.spacing.xs,
+    zIndex: 1,
+  },
+  moreButtonText: {
+    color: theme.colors.textSecondary,
+    fontSize: theme.fontSize.lg,
+    fontWeight: '600',
+    lineHeight: theme.fontSize.lg,
+  },
 });
 
 export default pollStyles;

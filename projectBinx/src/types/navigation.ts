@@ -11,5 +11,6 @@ export type RootStackParamList = {
   Login: undefined;
   CreateAccount: undefined;
   ForgotPassword: undefined;
+  Comments: {poll: PollData};
   MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
 };

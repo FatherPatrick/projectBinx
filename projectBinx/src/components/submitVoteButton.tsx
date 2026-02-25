@@ -1,5 +1,5 @@
 import React from 'react';
-import {StyleSheet, Text, TouchableOpacity} from 'react-native';
+import {StyleProp, StyleSheet, Text, TouchableOpacity, ViewStyle} from 'react-native';
 import pollStyles from '../styles/pollStyles';
 import theme from '../styles/theme';
 
@@ -7,16 +7,22 @@ interface SubmitVoteButtonProps {
   isSubmitting: boolean;
   onPress: () => void;
   submittingLabel?: string;
+  style?: StyleProp<ViewStyle>;
 }
 
 const SubmitVoteButton: React.FC<SubmitVoteButtonProps> = ({
   isSubmitting,
   onPress,
   submittingLabel = 'Submitting...',
+  style,
 }) => {
   return (
     <TouchableOpacity
-      style={[styles.submitButton, isSubmitting ? pollStyles.optionButtonDisabled : null]}
+      style={[
+        styles.submitButton,
+        isSubmitting ? pollStyles.optionButtonDisabled : null,
+        style,
+      ]}
       disabled={isSubmitting}
       onPress={onPress}>
       <Text style={styles.submitButtonText}>

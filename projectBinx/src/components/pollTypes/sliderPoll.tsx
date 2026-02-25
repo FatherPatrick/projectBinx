@@ -1,15 +1,33 @@
 import React, {useMemo, useRef, useState} from 'react';
-import {PanResponder, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {
+  PanResponder,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import {useNavigation} from '@react-navigation/native';
+import {StackNavigationProp} from '@react-navigation/stack';
 import {PollData} from '../../types/pollTypes';
+import {RootStackParamList} from '../../types/navigation';
 import PollService from '../../services/pollService';
 import SessionService from '../../services/sessionService';
 import pollStyles from '../../styles/pollStyles';
 import theme from '../../styles/theme';
 import SubmitVoteButton from '../submitVoteButton';
+import {MoreOptionsButton} from '../moreOptionsButton';
+import {
+  getPollReactionState,
+  toggleDislikeForPoll,
+  toggleLikeForPoll,
+} from './pollReactionState';
 
 interface SliderPollProps {
   poll: PollData;
   onSlidingStateChange?: (isSliding: boolean) => void;
+  commentActionMode?: 'default' | 'add';
+  onAddCommentPress?: () => void;
+  onPollDeleted?: () => void;
 }
 
 interface SliderAggregate {
@@ -20,9 +38,18 @@ interface SliderAggregate {
 const sliderAggregates = new Map<string, SliderAggregate>();
 
 const getPollAggregateKey = (poll: PollData): string =>
-  poll.pollId !== undefined ? String(poll.pollId) : `${poll.user}-${poll.title}`;
+  poll.pollId !== undefined
+    ? String(poll.pollId)
+    : `${poll.user}-${poll.title}`;
 
-const SliderPoll: React.FC<SliderPollProps> = ({poll, onSlidingStateChange}) => {
+const SliderPoll: React.FC<SliderPollProps> = ({
+  poll,
+  onSlidingStateChange,
+  commentActionMode = 'default',
+  onAddCommentPress,
+  onPollDeleted,
+}) => {
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const aggregateKey = getPollAggregateKey(poll);
   const existingAggregate = sliderAggregates.get(aggregateKey);
 
@@ -39,51 +66,48 @@ const SliderPoll: React.FC<SliderPollProps> = ({poll, onSlidingStateChange}) => 
   const [voteError, setVoteError] = useState<string | null>(null);
   const [alreadyVoted, setAlreadyVoted] = useState(false);
   const [sliderTrackWidth, setSliderTrackWidth] = useState(1);
+  const [reactionState, setReactionState] = useState(() =>
+    getPollReactionState(poll),
+  );
+  const currentUsername = SessionService.getCurrentUser()?.username;
+  const isCurrentUserPoll =
+    currentUsername !== undefined &&
+    poll.user.toLowerCase() === currentUsername.toLowerCase();
   const dragStartValueRef = useRef(sliderValue);
   const optionCount = poll.options.length;
 
-  const lockParentScroll = () => {
-    onSlidingStateChange?.(true);
-  };
+  const sliderPanResponder = useMemo(() => {
+    const updateSliderFromLocation = (locationX: number) => {
+      const clampedX = Math.max(0, Math.min(locationX, sliderTrackWidth));
+      const normalizedValue = clampedX / sliderTrackWidth;
+      setSliderValue(Math.round(normalizedValue * 100));
+    };
 
-  const unlockParentScroll = () => {
-    onSlidingStateChange?.(false);
-  };
-
-  const updateSliderFromLocation = (locationX: number) => {
-    const clampedX = Math.max(0, Math.min(locationX, sliderTrackWidth));
-    const normalizedValue = clampedX / sliderTrackWidth;
-    setSliderValue(Math.round(normalizedValue * 100));
-  };
-
-  const getClampedValue = (value: number) =>
-    Math.max(0, Math.min(100, Math.round(value)));
-
-  const sliderPanResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: (_, gestureState) =>
-          Math.abs(gestureState.dx) > 1,
-        onPanResponderGrant: event => {
-          lockParentScroll();
-          dragStartValueRef.current = sliderValue;
-          updateSliderFromLocation(event.nativeEvent.locationX);
-        },
-        onPanResponderMove: (_, gestureState) => {
-          const deltaValue = (gestureState.dx / sliderTrackWidth) * 100;
-          const nextValue = getClampedValue(dragStartValueRef.current + deltaValue);
-          setSliderValue(nextValue);
-        },
-        onPanResponderRelease: () => {
-          unlockParentScroll();
-        },
-        onPanResponderTerminate: () => {
-          unlockParentScroll();
-        },
-      }),
-    [sliderTrackWidth],
-  );
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) =>
+        Math.abs(gestureState.dx) > 1,
+      onPanResponderGrant: event => {
+        onSlidingStateChange?.(true);
+        dragStartValueRef.current = sliderValue;
+        updateSliderFromLocation(event.nativeEvent.locationX);
+      },
+      onPanResponderMove: (_, gestureState) => {
+        const deltaValue = (gestureState.dx / sliderTrackWidth) * 100;
+        const nextValue = Math.max(
+          0,
+          Math.min(100, Math.round(dragStartValueRef.current + deltaValue)),
+        );
+        setSliderValue(nextValue);
+      },
+      onPanResponderRelease: () => {
+        onSlidingStateChange?.(false);
+      },
+      onPanResponderTerminate: () => {
+        onSlidingStateChange?.(false);
+      },
+    });
+  }, [dragStartValueRef, onSlidingStateChange, sliderTrackWidth, sliderValue]);
 
   const handleSubmitVote = async () => {
     if (isSubmitting || alreadyVoted) {
@@ -135,6 +159,14 @@ const SliderPoll: React.FC<SliderPollProps> = ({poll, onSlidingStateChange}) => 
 
   return (
     <View style={pollStyles.card}>
+      {isCurrentUserPoll && onPollDeleted ? (
+        <MoreOptionsButton
+          itemType="poll"
+          containerStyle={pollStyles.moreButton}
+          onDelete={onPollDeleted}
+        />
+      ) : null}
+
       <Text style={pollStyles.title}>{poll.title}</Text>
       {poll.description ? (
         <Text style={pollStyles.description}>{poll.description}</Text>
@@ -142,7 +174,9 @@ const SliderPoll: React.FC<SliderPollProps> = ({poll, onSlidingStateChange}) => 
       {voteError ? <Text style={pollStyles.errorText}>{voteError}</Text> : null}
 
       <View style={styles.sliderContainer}>
-        <Text style={styles.sliderValueText}>Your value: {Math.round(sliderValue)}</Text>
+        <Text style={styles.sliderValueText}>
+          Your value: {Math.round(sliderValue)}
+        </Text>
 
         <View
           style={styles.sliderGestureWrapper}
@@ -159,7 +193,9 @@ const SliderPoll: React.FC<SliderPollProps> = ({poll, onSlidingStateChange}) => 
         </View>
 
         <View style={styles.sliderLabelsRow}>
-          <Text style={styles.sliderEdgeLabel}>{poll.options[0]?.optionText}</Text>
+          <Text style={styles.sliderEdgeLabel}>
+            {poll.options[0]?.optionText}
+          </Text>
           <Text style={styles.sliderEdgeLabel}>
             {poll.options[optionCount - 1]?.optionText}
           </Text>
@@ -170,9 +206,7 @@ const SliderPoll: React.FC<SliderPollProps> = ({poll, onSlidingStateChange}) => 
         <Text style={styles.averageText}>
           Average response: {averageValue.toFixed(1)} / 100
         </Text>
-        <Text style={styles.countText}>
-          Responses counted: {responseCount}
-        </Text>
+        <Text style={styles.countText}>Responses counted: {responseCount}</Text>
       </View>
 
       <SubmitVoteButton
@@ -180,6 +214,64 @@ const SliderPoll: React.FC<SliderPollProps> = ({poll, onSlidingStateChange}) => 
         submittingLabel={alreadyVoted ? 'Already Voted' : 'Submitting...'}
         onPress={handleSubmitVote}
       />
+
+      <View style={pollStyles.actionRow}>
+        <TouchableOpacity
+          style={[
+            pollStyles.iconActionButton,
+            reactionState.likedByCurrentUser
+              ? pollStyles.iconActionButtonActive
+              : null,
+          ]}
+          onPress={() =>
+            setReactionState(currentState =>
+              toggleLikeForPoll(poll, currentState),
+            )
+          }>
+          <Text style={pollStyles.commentsButtonText}>
+            👍 {reactionState.likes}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            pollStyles.iconActionButton,
+            reactionState.dislikedByCurrentUser
+              ? pollStyles.iconActionButtonActive
+              : null,
+          ]}
+          onPress={() => {
+            setReactionState(currentState => {
+              const nextState = toggleDislikeForPoll(poll, currentState);
+
+              if (nextState.dislikes >= 5) {
+                onPollDeleted?.();
+              }
+
+              return nextState;
+            });
+          }}>
+          <Text style={pollStyles.commentsButtonText}>
+            👎 {reactionState.dislikes}
+          </Text>
+        </TouchableOpacity>
+
+        {poll.allowComments && commentActionMode === 'add' ? (
+          <TouchableOpacity
+            style={pollStyles.commentsButton}
+            onPress={onAddCommentPress}>
+            <Text style={pollStyles.commentsButtonText}>Add Comment</Text>
+          </TouchableOpacity>
+        ) : null}
+
+        {poll.allowComments && commentActionMode === 'default' ? (
+          <TouchableOpacity
+            style={pollStyles.commentsButton}
+            onPress={() => navigation.navigate('Comments', {poll})}>
+            <Text style={pollStyles.commentsButtonText}>💬</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
     </View>
   );
 };

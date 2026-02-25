@@ -11,6 +11,7 @@ import {MainTabParamList, RootStackParamList} from './src/types/navigation';
 import CreatePoll from './src/screens/createPoll';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import Profile from './src/screens/profile';
+import Comments from './src/screens/comments';
 
 const Stack = createStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -86,6 +87,7 @@ function App(): React.JSX.Element {
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="CreateAccount" component={CreateAccount} />
         <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
+        <Stack.Screen name="Comments" component={Comments} />
         <Stack.Screen
           name="MainTabs"
           component={MainTabs}

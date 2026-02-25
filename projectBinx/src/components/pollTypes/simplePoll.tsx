@@ -1,17 +1,36 @@
 import React, {useState} from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {useNavigation} from '@react-navigation/native';
+import {StackNavigationProp} from '@react-navigation/stack';
 import {PollData} from '../../types/pollTypes';
+import {RootStackParamList} from '../../types/navigation';
 import PollService from '../../services/pollService';
 import SessionService from '../../services/sessionService';
 import pollStyles from '../../styles/pollStyles';
 import theme from '../../styles/theme';
 import SubmitVoteButton from '../submitVoteButton';
+import {MoreOptionsButton} from '../moreOptionsButton';
+import {
+  getPollReactionState,
+  toggleDislikeForPoll,
+  toggleLikeForPoll,
+} from './pollReactionState';
 
 interface SimplePollProps {
   poll: PollData;
+  commentActionMode?: 'default' | 'add';
+  onAddCommentPress?: () => void;
+  onPollDeleted?: () => void;
 }
 
-const SimplePoll: React.FC<SimplePollProps> = ({poll}) => {
+const SimplePoll: React.FC<SimplePollProps> = ({
+  poll,
+  commentActionMode = 'default',
+  onAddCommentPress,
+  onPollDeleted,
+}) => {
+  const navigation =
+    useNavigation<StackNavigationProp<RootStackParamList>>();
   const [selected, setSelected] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [voteError, setVoteError] = useState<string | null>(null);
@@ -20,6 +39,13 @@ const SimplePoll: React.FC<SimplePollProps> = ({poll}) => {
   const [votePercentages, setVotePercentages] = useState<
     Record<number, number>
   >({});
+  const [reactionState, setReactionState] = useState(() =>
+    getPollReactionState(poll),
+  );
+  const currentUsername = SessionService.getCurrentUser()?.username;
+  const isCurrentUserPoll =
+    currentUsername !== undefined &&
+    poll.user.toLowerCase() === currentUsername.toLowerCase();
 
   const getMatchingVotesForOption = (
     optionIndex: number,
@@ -211,6 +237,14 @@ const SimplePoll: React.FC<SimplePollProps> = ({poll}) => {
 
   return (
     <View style={pollStyles.card}>
+      {isCurrentUserPoll && onPollDeleted ? (
+        <MoreOptionsButton
+          itemType="poll"
+          containerStyle={pollStyles.moreButton}
+          onDelete={onPollDeleted}
+        />
+      ) : null}
+
       <Text style={pollStyles.title}>{poll.title}</Text>
       {poll.description ? (
         <Text style={pollStyles.description}>{poll.description}</Text>
@@ -226,6 +260,62 @@ const SimplePoll: React.FC<SimplePollProps> = ({poll}) => {
           onPress={handleSubmitVote}
         />
       ) : null}
+
+      <View style={pollStyles.actionRow}>
+        <TouchableOpacity
+          style={[
+            pollStyles.iconActionButton,
+            reactionState.likedByCurrentUser
+              ? pollStyles.iconActionButtonActive
+              : null,
+          ]}
+          onPress={() =>
+            setReactionState(currentState => toggleLikeForPoll(poll, currentState))
+          }>
+          <Text style={pollStyles.commentsButtonText}>
+            👍 {reactionState.likes}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            pollStyles.iconActionButton,
+            reactionState.dislikedByCurrentUser
+              ? pollStyles.iconActionButtonActive
+              : null,
+          ]}
+          onPress={() => {
+            setReactionState(currentState => {
+              const nextState = toggleDislikeForPoll(poll, currentState);
+
+              if (nextState.dislikes >= 5) {
+                onPollDeleted?.();
+              }
+
+              return nextState;
+            });
+          }}>
+          <Text style={pollStyles.commentsButtonText}>
+            👎 {reactionState.dislikes}
+          </Text>
+        </TouchableOpacity>
+
+        {poll.allowComments && commentActionMode === 'add' ? (
+          <TouchableOpacity
+            style={pollStyles.commentsButton}
+            onPress={onAddCommentPress}>
+            <Text style={pollStyles.commentsButtonText}>Add Comment</Text>
+          </TouchableOpacity>
+        ) : null}
+
+        {poll.allowComments && commentActionMode === 'default' ? (
+          <TouchableOpacity
+            style={pollStyles.commentsButton}
+            onPress={() => navigation.navigate('Comments', {poll})}>
+            <Text style={pollStyles.commentsButtonText}>💬</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
     </View>
   );
 };
