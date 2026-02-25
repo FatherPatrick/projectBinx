@@ -21,6 +21,7 @@ export interface PollData {
   description?: string;
   type: PollType;
   allowComments: boolean;
+  commentCount?: number;
   options: PollOption[];
 }
 
@@ -39,3 +40,32 @@ export interface PollResult {
 }
 
 export type Results = PollResult;
+
+export type ReactionType = 'like' | 'dislike';
+
+export interface PollReactionSummary {
+  pollId: number;
+  likes: number;
+  dislikes: number;
+  viewerReaction: ReactionType | null;
+}
+
+export interface CommentReactionSummary {
+  commentId: number;
+  likes: number;
+  dislikes: number;
+  viewerReaction: ReactionType | null;
+}
+
+export interface PollComment {
+  commentId: number;
+  pollId: number;
+  parentCommentId: number | null;
+  authorName: string;
+  content: string;
+  likes: number;
+  dislikes: number;
+  viewerReaction: ReactionType | null;
+  createdAt: string;
+  updatedAt: string;
+}

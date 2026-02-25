@@ -3,6 +3,7 @@
 projectBinx is an anonymous, community-driven polling app
 
 The core idea is simple:
+
 - users create polls (not long text posts)
 - users vote to surface what matters
 - the community self-regulates content
@@ -19,6 +20,7 @@ The core idea is simple:
 The mobile app is a React Native project located in [projectBinx](projectBinx).
 
 Implemented foundation includes:
+
 - login/create-account/forgot-password screens
 - home feed that fetches and renders polls
 - poll service for CRUD + voting + result fetch
@@ -121,6 +123,7 @@ You can customize these by creating a root `.env` file before running `npm run s
 ## API Configuration
 
 Update base URLs before testing live API calls:
+
 - [projectBinx/src/uri.ts](projectBinx/src/uri.ts)
 - [projectBinx/src/services/loginService.ts](projectBinx/src/services/loginService.ts)
 
@@ -136,12 +139,55 @@ Moderation is intentionally simple and transparent:
 
 This keeps the feed community-curated without exposing identities.
 
+## Abuse Protection (Implemented)
+
+Backend API rate limiting is active for write-heavy routes to reduce spam.
+
+- Global write limiter on `/api` for `POST` / `PUT` / `PATCH` / `DELETE`
+- Auth-specific limits on:
+  - `POST /api/login`
+  - `POST /api/login/new`
+  - `POST /api/login/forgot`
+- Poll action limits on:
+
+  - `POST /api/poll` (create)
+  - `PUT /api/poll/update/:id`
+  - `DELETE /api/poll/delete/:id`
+  - `POST /api/poll/vote/:id`
+
+- Comment/reaction limits on:
+  - `POST /api/poll/comments/:id`
+  - `DELETE /api/poll/comments/:pollId/:commentId`
+  - `POST /api/poll/reaction/:id`
+  - `DELETE /api/poll/reaction/:id`
+  - `POST /api/poll/comment/reaction/:commentId`
+  - `DELETE /api/poll/comment/reaction/:commentId`
+
+When limit is exceeded, API returns `429` with a retry hint.
+
+## Interaction APIs (Implemented)
+
+Backend now persists comments and likes/dislikes.
+
+- Comments:
+  - `GET /api/poll/comments/:id`
+  - `POST /api/poll/comments/:id`
+  - `DELETE /api/poll/comments/:pollId/:commentId`
+- Poll reactions:
+  - `GET /api/poll/reaction/:id`
+  - `POST /api/poll/reaction/:id`
+  - `DELETE /api/poll/reaction/:id`
+- Comment reactions:
+  - `GET /api/poll/comment/reaction/:commentId`
+  - `POST /api/poll/comment/reaction/:commentId`
+  - `DELETE /api/poll/comment/reaction/:commentId`
+
 ## Roadmap
 
 - enforce anonymous session/auth flow end-to-end
 - implement score tracking + auto-delete at `-5`
 - add geofenced/local feed support
-- add abuse/rate-limit protections to prevent brigading/spam
+- expand anti-abuse protections to upcoming comment/like endpoints
 - improve UX for creating different poll types
 
 ## Vision

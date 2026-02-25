@@ -1,21 +1,23 @@
-const swaggerJsdoc = require('swagger-jsdoc');
+const swaggerJsdoc = require("swagger-jsdoc");
 
 const swaggerOptions = {
   definition: {
-    swagger: '2.0',
+    swagger: "2.0",
     info: {
-      title: 'projectBinx API',
-      version: '1.0.0',
-      description: 'Backend API for projectBinx mobile app',
+      title: "projectBinx API",
+      version: "1.0.0",
+      description: "Backend API for projectBinx mobile app",
     },
     servers: [
       {
-        url: process.env.API_BASE_URL || `http://localhost:${process.env.PORT || 4000}`,
-        description: 'Local server',
+        url:
+          process.env.API_BASE_URL ||
+          `http://localhost:${process.env.PORT || 4000}`,
+        description: "Local server",
       },
     ],
   },
-  apis: ['./src/**/*.js'],
+  apis: ["./src/**/*.js"],
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);

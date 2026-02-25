@@ -1,15 +1,20 @@
-const express = require('express');
+const express = require("express");
 const {
   createSession,
   createUser,
   findUserByPhone,
   toPublicUser,
   validateUserPassword,
-} = require('../auth');
+} = require("../auth");
+const {
+  authForgotLimiter,
+  authLoginLimiter,
+  authSignupLimiter,
+} = require("../middleware/rateLimiters");
 
 const router = express.Router();
 
-const normalizePhone = phoneNumber => String(phoneNumber || '').trim();
+const normalizePhone = (phoneNumber) => String(phoneNumber || "").trim();
 
 /**
  * @swagger
@@ -38,15 +43,15 @@ const normalizePhone = phoneNumber => String(phoneNumber || '').trim();
  *       401:
  *         description: Invalid credentials
  */
-router.post('/login', async (req, res) => {
+router.post("/login", authLoginLimiter, async (req, res) => {
   const phoneNumber = normalizePhone(req.body.phoneNumber);
-  const password = String(req.body.password || '');
-  const deviceId = String(req.body.deviceId || '').trim();
+  const password = String(req.body.password || "");
+  const deviceId = String(req.body.deviceId || "").trim();
 
   if (!phoneNumber || !password || !deviceId) {
     return res.status(400).json({
       success: false,
-      message: 'phoneNumber, password, and deviceId are required.',
+      message: "phoneNumber, password, and deviceId are required.",
     });
   }
 
@@ -56,15 +61,15 @@ router.post('/login', async (req, res) => {
     if (!user || !validateUserPassword(user, password)) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials.',
+        message: "Invalid credentials.",
       });
     }
 
-    const session = await createSession({userId: user.id, deviceId});
+    const session = await createSession({ userId: user.id, deviceId });
 
     return res.status(200).json({
       success: true,
-      message: 'Login successful',
+      message: "Login successful",
       token: session.token,
       refreshToken: session.refreshToken,
       user: toPublicUser(user),
@@ -72,7 +77,7 @@ router.post('/login', async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: 'Unable to login right now.',
+      message: "Unable to login right now.",
     });
   }
 });
@@ -104,15 +109,15 @@ router.post('/login', async (req, res) => {
  *       409:
  *         description: Account already exists
  */
-router.post('/login/new', async (req, res) => {
+router.post("/login/new", authSignupLimiter, async (req, res) => {
   const phoneNumber = normalizePhone(req.body.phoneNumber);
-  const password = String(req.body.password || '');
-  const deviceId = String(req.body.deviceId || '').trim();
+  const password = String(req.body.password || "");
+  const deviceId = String(req.body.deviceId || "").trim();
 
   if (!phoneNumber || !password || !deviceId) {
     return res.status(400).json({
       success: false,
-      message: 'phoneNumber, password, and deviceId are required.',
+      message: "phoneNumber, password, and deviceId are required.",
     });
   }
 
@@ -122,21 +127,21 @@ router.post('/login/new', async (req, res) => {
     if (existingUser) {
       return res.status(409).json({
         success: false,
-        message: 'An account with this phone number already exists.',
+        message: "An account with this phone number already exists.",
       });
     }
 
-    const createdUser = await createUser({phoneNumber, password, deviceId});
+    const createdUser = await createUser({ phoneNumber, password, deviceId });
 
     return res.status(201).json({
       success: true,
-      message: 'Account created successfully.',
+      message: "Account created successfully.",
       user: toPublicUser(createdUser),
     });
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: 'Unable to create account right now.',
+      message: "Unable to create account right now.",
     });
   }
 });
@@ -164,21 +169,21 @@ router.post('/login/new', async (req, res) => {
  *       200:
  *         description: Reset flow started (or no-op for unknown number)
  */
-router.post('/login/forgot', async (req, res) => {
+router.post("/login/forgot", authForgotLimiter, async (req, res) => {
   const phoneNumber = normalizePhone(req.body.phoneNumber);
-  const deviceId = String(req.body.deviceId || '').trim();
+  const deviceId = String(req.body.deviceId || "").trim();
 
   if (!phoneNumber || !deviceId) {
     return res.status(400).json({
       success: false,
-      message: 'phoneNumber and deviceId are required.',
+      message: "phoneNumber and deviceId are required.",
     });
   }
 
   return res.status(200).json({
     success: true,
-    message: 'Reset request sent. Check your messages.',
-    deliveryChannel: 'sms',
+    message: "Reset request sent. Check your messages.",
+    deliveryChannel: "sms",
   });
 });
 

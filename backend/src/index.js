@@ -1,26 +1,28 @@
-require('dotenv').config();
+require("dotenv").config();
 
-const express = require('express');
-const cors = require('cors');
-const swaggerUi = require('swagger-ui-express');
-const {swaggerSpec} = require('./swagger');
+const express = require("express");
+const cors = require("cors");
+const swaggerUi = require("swagger-ui-express");
+const { swaggerSpec } = require("./swagger");
 const {
   checkDbHealth,
   ensureAuthSchema,
   ensurePollSchema,
   seedDefaultPolls,
   seedDefaultUsers,
-} = require('./db');
-const authRoutes = require('./routes/authRoutes');
-const pollRoutes = require('./routes/pollRoutes');
+} = require("./db");
+const { apiWriteLimiter } = require("./middleware/rateLimiters");
+const authRoutes = require("./routes/authRoutes");
+const pollRoutes = require("./routes/pollRoutes");
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
 
 app.use(cors());
-app.use(express.json({strict: false}));
-app.use('/api', authRoutes);
-app.use('/api', pollRoutes);
+app.use(express.json({ strict: false }));
+app.use("/api", apiWriteLimiter);
+app.use("/api", authRoutes);
+app.use("/api", pollRoutes);
 
 /**
  * @swagger
@@ -33,10 +35,10 @@ app.use('/api', pollRoutes);
  *       200:
  *         description: API is healthy
  */
-app.get('/health', (_req, res) => {
+app.get("/health", (_req, res) => {
   res.status(200).json({
-    status: 'ok',
-    service: 'projectBinx-backend',
+    status: "ok",
+    service: "projectBinx-backend",
     timestamp: new Date().toISOString(),
   });
 });
@@ -54,24 +56,24 @@ app.get('/health', (_req, res) => {
  *       500:
  *         description: Database connection failed
  */
-app.get('/health/db', async (_req, res) => {
+app.get("/health/db", async (_req, res) => {
   try {
     const result = await checkDbHealth();
     res.status(200).json({
-      status: 'ok',
-      database: 'connected',
+      status: "ok",
+      database: "connected",
       now: result.now,
     });
   } catch (error) {
     res.status(500).json({
-      status: 'error',
-      database: 'unreachable',
-      message: 'Unable to connect to database',
+      status: "error",
+      database: "unreachable",
+      message: "Unable to connect to database",
     });
   }
 });
 
-app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 const startServer = async () => {
   try {
@@ -85,7 +87,7 @@ const startServer = async () => {
       console.log(`Swagger docs available at http://localhost:${port}/docs`);
     });
   } catch (error) {
-    console.error('Failed to initialize backend:', error);
+    console.error("Failed to initialize backend:", error);
     process.exit(1);
   }
 };

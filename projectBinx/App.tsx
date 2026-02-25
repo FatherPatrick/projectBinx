@@ -1,6 +1,6 @@
 import {NavigationContainer} from '@react-navigation/native';
-import React from 'react';
-import {StyleSheet} from 'react-native';
+import React, {useEffect, useState} from 'react';
+import {ActivityIndicator, StyleSheet, View} from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LoginScreen from './src/screens/login';
 import Home from './src/screens/home';
@@ -12,6 +12,7 @@ import CreatePoll from './src/screens/createPoll';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import Profile from './src/screens/profile';
 import Comments from './src/screens/comments';
+import SessionService from './src/services/sessionService';
 
 const Stack = createStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -81,9 +82,31 @@ const MainTabs = () => {
 };
 
 function App(): React.JSX.Element {
+  const [sessionReady, setSessionReady] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const initializeSession = async () => {
+      const restoredSession = await SessionService.restoreSession();
+      setIsAuthenticated(Boolean(restoredSession));
+      setSessionReady(true);
+    };
+
+    initializeSession();
+  }, []);
+
+  if (!sessionReady) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#1d4ed8" />
+      </View>
+    );
+  }
+
   return (
     <NavigationContainer>
-      <Stack.Navigator>
+      <Stack.Navigator
+        initialRouteName={isAuthenticated ? 'MainTabs' : 'Login'}>
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="CreateAccount" component={CreateAccount} />
         <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
@@ -99,6 +122,11 @@ function App(): React.JSX.Element {
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   tabLabel: {
     fontSize: 10,
     marginBottom: 2,

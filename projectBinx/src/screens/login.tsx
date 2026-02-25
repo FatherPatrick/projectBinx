@@ -62,10 +62,17 @@ const LoginScreen: React.FC<Props> = ({navigation}) => {
     try {
       setLoading(true);
       const loginResponse = await LoginService.tryLogin(credentials);
-      SessionService.setCurrentUserFromAuthUser(loginResponse.user);
-      navigation.navigate('MainTabs', {screen: 'Home'});
+      await SessionService.setCurrentUserFromAuthUser(loginResponse.user);
+      navigation.reset({
+        index: 0,
+        routes: [{name: 'MainTabs', params: {screen: 'Home'}}],
+      });
     } catch (error) {
-      setErrorMessage('Login failed. Please check your credentials.');
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'Login failed. Please check your credentials.',
+      );
     } finally {
       setLoading(false);
     }
@@ -118,7 +125,11 @@ const LoginScreen: React.FC<Props> = ({navigation}) => {
       {errorMessage ? (
         <Text style={globalStyles.errorText}>{errorMessage}</Text>
       ) : null}
-      <Button title={loading ? 'Logging in...' : 'Login'} onPress={handleLogin} disabled={loading} />
+      <Button
+        title={loading ? 'Logging in...' : 'Login'}
+        onPress={handleLogin}
+        disabled={loading}
+      />
       <TouchableOpacity onPress={handleForgotPassword}>
         <Text style={styles.forgotPassword}>Forgot Password?</Text>
       </TouchableOpacity>

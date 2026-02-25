@@ -1,5 +1,11 @@
 import React from 'react';
-import {StyleProp, StyleSheet, Text, TouchableOpacity, ViewStyle} from 'react-native';
+import {
+  StyleProp,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  ViewStyle,
+} from 'react-native';
 import pollStyles from '../styles/pollStyles';
 import theme from '../styles/theme';
 

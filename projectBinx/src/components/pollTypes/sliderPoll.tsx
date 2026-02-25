@@ -16,11 +16,6 @@ import pollStyles from '../../styles/pollStyles';
 import theme from '../../styles/theme';
 import SubmitVoteButton from '../submitVoteButton';
 import {MoreOptionsButton} from '../moreOptionsButton';
-import {
-  getPollReactionState,
-  toggleDislikeForPoll,
-  toggleLikeForPoll,
-} from './pollReactionState';
 
 interface SliderPollProps {
   poll: PollData;
@@ -33,6 +28,13 @@ interface SliderPollProps {
 interface SliderAggregate {
   total: number;
   count: number;
+}
+
+interface PollReactionUiState {
+  likes: number;
+  dislikes: number;
+  likedByCurrentUser: boolean;
+  dislikedByCurrentUser: boolean;
 }
 
 const sliderAggregates = new Map<string, SliderAggregate>();
@@ -66,15 +68,188 @@ const SliderPoll: React.FC<SliderPollProps> = ({
   const [voteError, setVoteError] = useState<string | null>(null);
   const [alreadyVoted, setAlreadyVoted] = useState(false);
   const [sliderTrackWidth, setSliderTrackWidth] = useState(1);
-  const [reactionState, setReactionState] = useState(() =>
-    getPollReactionState(poll),
-  );
+  const [reactionState, setReactionState] = useState<PollReactionUiState>({
+    likes: 0,
+    dislikes: 0,
+    likedByCurrentUser: false,
+    dislikedByCurrentUser: false,
+  });
+  const commentCount = poll.commentCount ?? 0;
   const currentUsername = SessionService.getCurrentUser()?.username;
   const isCurrentUserPoll =
     currentUsername !== undefined &&
     poll.user.toLowerCase() === currentUsername.toLowerCase();
   const dragStartValueRef = useRef(sliderValue);
   const optionCount = poll.options.length;
+
+  React.useEffect(() => {
+    const loadReactionSummary = async () => {
+      if (poll.pollId === undefined) {
+        return;
+      }
+
+      try {
+        const summary = await PollService.getPollReactionById(
+          poll.pollId,
+          currentUsername,
+        );
+
+        setReactionState({
+          likes: summary.likes,
+          dislikes: summary.dislikes,
+          likedByCurrentUser: summary.viewerReaction === 'like',
+          dislikedByCurrentUser: summary.viewerReaction === 'dislike',
+        });
+      } catch (error) {
+        setReactionState({
+          likes: 0,
+          dislikes: 0,
+          likedByCurrentUser: false,
+          dislikedByCurrentUser: false,
+        });
+      }
+    };
+
+    loadReactionSummary();
+  }, [currentUsername, poll.pollId]);
+
+  const applyPollReaction = (summary: {
+    likes: number;
+    dislikes: number;
+    viewerReaction: 'like' | 'dislike' | null;
+  }) => {
+    setReactionState({
+      likes: summary.likes,
+      dislikes: summary.dislikes,
+      likedByCurrentUser: summary.viewerReaction === 'like',
+      dislikedByCurrentUser: summary.viewerReaction === 'dislike',
+    });
+
+    if (summary.dislikes >= 5) {
+      onPollDeleted?.();
+    }
+  };
+
+  const requestWithRetry = async <T,>(
+    request: () => Promise<T>,
+    retries = 1,
+  ): Promise<T> => {
+    try {
+      return await request();
+    } catch (error) {
+      if (retries <= 0) {
+        throw error;
+      }
+
+      return requestWithRetry(request, retries - 1);
+    }
+  };
+
+  const getOptimisticLikeState = (
+    currentState: PollReactionUiState,
+  ): PollReactionUiState => {
+    if (currentState.likedByCurrentUser) {
+      return {
+        ...currentState,
+        likes: Math.max(0, currentState.likes - 1),
+        likedByCurrentUser: false,
+      };
+    }
+
+    return {
+      ...currentState,
+      likes: currentState.likes + 1,
+      dislikes: currentState.dislikedByCurrentUser
+        ? Math.max(0, currentState.dislikes - 1)
+        : currentState.dislikes,
+      likedByCurrentUser: true,
+      dislikedByCurrentUser: false,
+    };
+  };
+
+  const getOptimisticDislikeState = (
+    currentState: PollReactionUiState,
+  ): PollReactionUiState => {
+    if (currentState.dislikedByCurrentUser) {
+      return {
+        ...currentState,
+        dislikes: Math.max(0, currentState.dislikes - 1),
+        dislikedByCurrentUser: false,
+      };
+    }
+
+    return {
+      ...currentState,
+      dislikes: currentState.dislikes + 1,
+      likes: currentState.likedByCurrentUser
+        ? Math.max(0, currentState.likes - 1)
+        : currentState.likes,
+      likedByCurrentUser: false,
+      dislikedByCurrentUser: true,
+    };
+  };
+
+  const handleLikePress = async () => {
+    if (poll.pollId === undefined || !currentUsername) {
+      return;
+    }
+
+    const previousState = reactionState;
+    setReactionState(getOptimisticLikeState(previousState));
+
+    try {
+      const summary = reactionState.likedByCurrentUser
+        ? await requestWithRetry(
+            () =>
+              PollService.clearPollReactionById(poll.pollId!, currentUsername),
+            1,
+          )
+        : await requestWithRetry(
+            () =>
+              PollService.setPollReactionById(
+                poll.pollId!,
+                currentUsername,
+                'like',
+              ),
+            1,
+          );
+
+      applyPollReaction(summary);
+    } catch (error) {
+      setReactionState(previousState);
+    }
+  };
+
+  const handleDislikePress = async () => {
+    if (poll.pollId === undefined || !currentUsername) {
+      return;
+    }
+
+    const previousState = reactionState;
+    setReactionState(getOptimisticDislikeState(previousState));
+
+    try {
+      const summary = reactionState.dislikedByCurrentUser
+        ? await requestWithRetry(
+            () =>
+              PollService.clearPollReactionById(poll.pollId!, currentUsername),
+            1,
+          )
+        : await requestWithRetry(
+            () =>
+              PollService.setPollReactionById(
+                poll.pollId!,
+                currentUsername,
+                'dislike',
+              ),
+            1,
+          );
+
+      applyPollReaction(summary);
+    } catch (error) {
+      setReactionState(previousState);
+    }
+  };
 
   const sliderPanResponder = useMemo(() => {
     const updateSliderFromLocation = (locationX: number) => {
@@ -223,11 +398,7 @@ const SliderPoll: React.FC<SliderPollProps> = ({
               ? pollStyles.iconActionButtonActive
               : null,
           ]}
-          onPress={() =>
-            setReactionState(currentState =>
-              toggleLikeForPoll(poll, currentState),
-            )
-          }>
+          onPress={handleLikePress}>
           <Text style={pollStyles.commentsButtonText}>
             👍 {reactionState.likes}
           </Text>
@@ -240,17 +411,7 @@ const SliderPoll: React.FC<SliderPollProps> = ({
               ? pollStyles.iconActionButtonActive
               : null,
           ]}
-          onPress={() => {
-            setReactionState(currentState => {
-              const nextState = toggleDislikeForPoll(poll, currentState);
-
-              if (nextState.dislikes >= 5) {
-                onPollDeleted?.();
-              }
-
-              return nextState;
-            });
-          }}>
+          onPress={handleDislikePress}>
           <Text style={pollStyles.commentsButtonText}>
             👎 {reactionState.dislikes}
           </Text>
@@ -268,7 +429,7 @@ const SliderPoll: React.FC<SliderPollProps> = ({
           <TouchableOpacity
             style={pollStyles.commentsButton}
             onPress={() => navigation.navigate('Comments', {poll})}>
-            <Text style={pollStyles.commentsButtonText}>💬</Text>
+            <Text style={pollStyles.commentsButtonText}>💬 {commentCount}</Text>
           </TouchableOpacity>
         ) : null}
       </View>

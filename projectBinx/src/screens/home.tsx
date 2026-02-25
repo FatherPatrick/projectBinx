@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -24,10 +24,16 @@ interface Props {
 }
 
 const Home: React.FC<Props> = ({navigation, route}) => {
-  const TOP_SPRING_PULL_LIMIT = 56;
+  const PAGE_SIZE = 25;
+  const MAX_OVERSCROLL_MULTIPLIER = 1.6;
+  const OVERSCROLL_GAIN = 1.1;
+  const OVERSCROLL_CURVE = 1.8;
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [polls, setPolls] = useState<PollData[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isSliderInteracting, setIsSliderInteracting] = useState(false);
   const springOffset = React.useRef(new Animated.Value(0)).current;
   const touchStartYRef = React.useRef<number | null>(null);
@@ -37,10 +43,6 @@ const Home: React.FC<Props> = ({navigation, route}) => {
     contentHeight: 0,
     containerHeight: 0,
   });
-
-  useEffect(() => {
-    fetchPolls();
-  }, []);
 
   useEffect(() => {
     const createdPoll = route.params?.createdPoll;
@@ -53,26 +55,92 @@ const Home: React.FC<Props> = ({navigation, route}) => {
     navigation.setParams({createdPoll: undefined});
   }, [navigation, route.params?.createdPoll]);
 
-  const fetchPolls = async (isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    }
+  const mergeUniquePolls = useCallback(
+    (existing: PollData[], incoming: PollData[]) => {
+      const existingIds = new Set(
+        existing.map(item =>
+          item.pollId !== undefined
+            ? `id-${String(item.pollId)}`
+            : `key-${item.user}-${item.title}`,
+        ),
+      );
 
-    try {
-      const fetchedPolls = await PollService.getPagedPolls();
-      setPolls(fetchedPolls);
-    } catch (error) {
-      console.error('Error fetching polls:', error);
-    } finally {
+      const uniqueIncoming = incoming.filter(item => {
+        const key =
+          item.pollId !== undefined
+            ? `id-${String(item.pollId)}`
+            : `key-${item.user}-${item.title}`;
+
+        if (existingIds.has(key)) {
+          return false;
+        }
+
+        existingIds.add(key);
+        return true;
+      });
+
+      return [...existing, ...uniqueIncoming];
+    },
+    [],
+  );
+
+  const fetchPolls = useCallback(
+    async ({
+      pageToLoad,
+      isRefresh = false,
+    }: {
+      pageToLoad: number;
+      isRefresh?: boolean;
+    }) => {
       if (isRefresh) {
-        setRefreshing(false);
+        setRefreshing(true);
       }
-      setLoading(false);
-    }
-  };
+
+      try {
+        const fetchedPolls = await PollService.getPagedPolls({
+          page: pageToLoad,
+          pageSize: PAGE_SIZE,
+        });
+
+        if (pageToLoad === 1) {
+          setPolls(fetchedPolls);
+        } else {
+          setPolls(previousPolls =>
+            mergeUniquePolls(previousPolls, fetchedPolls),
+          );
+        }
+
+        setPage(pageToLoad);
+        setHasMore(fetchedPolls.length === PAGE_SIZE);
+      } catch (error) {
+        console.error('Error fetching polls:', error);
+      } finally {
+        if (isRefresh) {
+          setRefreshing(false);
+        }
+        setIsLoadingMore(false);
+        setLoading(false);
+      }
+    },
+    [PAGE_SIZE, mergeUniquePolls],
+  );
+
+  useEffect(() => {
+    fetchPolls({pageToLoad: 1});
+  }, [fetchPolls]);
 
   const handleRefresh = () => {
-    fetchPolls(true);
+    setHasMore(true);
+    fetchPolls({pageToLoad: 1, isRefresh: true});
+  };
+
+  const handleLoadMore = () => {
+    if (loading || refreshing || isLoadingMore || !hasMore) {
+      return;
+    }
+
+    setIsLoadingMore(true);
+    fetchPolls({pageToLoad: page + 1});
   };
 
   const removePollFromFeed = (poll: PollData) => {
@@ -117,6 +185,18 @@ const Home: React.FC<Props> = ({navigation, route}) => {
     touchStartYRef.current = pageY;
   };
 
+  const getRubberBandOffset = (
+    dragDistance: number,
+    containerHeight: number,
+  ) => {
+    const safeHeight = Math.max(containerHeight, 1);
+    const scaledOffset =
+      (dragDistance * OVERSCROLL_GAIN) /
+      (1 + dragDistance / (safeHeight * OVERSCROLL_CURVE));
+
+    return Math.min(scaledOffset, safeHeight * MAX_OVERSCROLL_MULTIPLIER);
+  };
+
   const handleTouchMove = (pageY: number) => {
     if (touchStartYRef.current === null) {
       return;
@@ -128,23 +208,17 @@ const Home: React.FC<Props> = ({navigation, route}) => {
     const atTop = offsetY <= 0;
     const atBottom = offsetY >= maxOffset - 1;
 
-    if (atTop && deltaY > 0 && deltaY <= TOP_SPRING_PULL_LIMIT) {
+    if (atTop && deltaY > 0) {
       isSpringDraggingRef.current = true;
-      springOffset.setValue(deltaY * 0.35);
-      return;
-    }
-
-    if (atTop && deltaY > TOP_SPRING_PULL_LIMIT) {
-      if (isSpringDraggingRef.current) {
-        springOffset.setValue(0);
-        isSpringDraggingRef.current = false;
-      }
+      springOffset.setValue(getRubberBandOffset(deltaY, containerHeight));
       return;
     }
 
     if (atBottom && deltaY < 0) {
       isSpringDraggingRef.current = true;
-      springOffset.setValue(deltaY * 0.35);
+      springOffset.setValue(
+        -getRubberBandOffset(Math.abs(deltaY), containerHeight),
+      );
       return;
     }
 
@@ -187,9 +261,15 @@ const Home: React.FC<Props> = ({navigation, route}) => {
       <FlatList
         data={polls}
         renderItem={({item}) => renderPoll(item)}
-        keyExtractor={item => item.pollId!.toString()}
+        keyExtractor={(item, index) =>
+          item.pollId !== undefined
+            ? item.pollId.toString()
+            : `${item.user}-${item.title}-${index}`
+        }
         refreshing={refreshing}
         onRefresh={handleRefresh}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.4}
         progressViewOffset={theme.spacing.xxl}
         bounces={true}
         alwaysBounceVertical={true}
@@ -214,6 +294,18 @@ const Home: React.FC<Props> = ({navigation, route}) => {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={<Text style={globalStyles.title}>Polls</Text>}
+        ListEmptyComponent={
+          !loading ? (
+            <Text style={styles.emptyText}>No polls available yet.</Text>
+          ) : null
+        }
+        ListFooterComponent={
+          isLoadingMore ? (
+            <View style={styles.footerLoader}>
+              <ActivityIndicator size="small" color={theme.colors.primary} />
+            </View>
+          ) : null
+        }
       />
     </Animated.View>
   );
@@ -227,6 +319,13 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
     padding: theme.spacing.xl,
     flexGrow: 1,
+  },
+  footerLoader: {
+    paddingVertical: theme.spacing.md,
+  },
+  emptyText: {
+    color: theme.colors.textSecondary,
+    fontSize: theme.fontSize.base,
   },
 });
 

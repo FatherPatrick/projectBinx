@@ -1,22 +1,22 @@
-const {spawn} = require('node:child_process');
-const fs = require('node:fs');
-const net = require('node:net');
-const path = require('node:path');
-const readline = require('node:readline');
+const { spawn } = require("node:child_process");
+const fs = require("node:fs");
+const net = require("node:net");
+const path = require("node:path");
+const readline = require("node:readline");
 
-const isWindows = process.platform === 'win32';
+const isWindows = process.platform === "win32";
 
 const runCommand = (command, args, label) =>
   new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       shell: true,
       windowsHide: true,
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: ["ignore", "pipe", "pipe"],
     });
 
     const pipeWithPrefix = (stream, prefix, target) => {
-      const rl = readline.createInterface({input: stream});
-      rl.on('line', line => {
+      const rl = readline.createInterface({ input: stream });
+      rl.on("line", (line) => {
         target.write(`[${prefix}] ${line}\n`);
       });
     };
@@ -24,8 +24,8 @@ const runCommand = (command, args, label) =>
     pipeWithPrefix(child.stdout, label, process.stdout);
     pipeWithPrefix(child.stderr, label, process.stderr);
 
-    child.on('error', reject);
-    child.on('close', code => {
+    child.on("error", reject);
+    child.on("close", (code) => {
       if (code === 0) {
         resolve();
       } else {
@@ -40,12 +40,12 @@ const runCommandInDir = (command, args, label, cwd) =>
       cwd,
       shell: true,
       windowsHide: true,
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: ["ignore", "pipe", "pipe"],
     });
 
     const pipeWithPrefix = (stream, prefix, target) => {
-      const rl = readline.createInterface({input: stream});
-      rl.on('line', line => {
+      const rl = readline.createInterface({ input: stream });
+      rl.on("line", (line) => {
         target.write(`[${prefix}] ${line}\n`);
       });
     };
@@ -53,8 +53,8 @@ const runCommandInDir = (command, args, label, cwd) =>
     pipeWithPrefix(child.stdout, label, process.stdout);
     pipeWithPrefix(child.stderr, label, process.stderr);
 
-    child.on('error', reject);
-    child.on('close', code => {
+    child.on("error", reject);
+    child.on("close", (code) => {
       if (code === 0) {
         resolve();
       } else {
@@ -67,12 +67,12 @@ const spawnLongRunning = (command, args, label) => {
   const child = spawn(command, args, {
     shell: true,
     windowsHide: true,
-    stdio: ['ignore', 'pipe', 'pipe'],
+    stdio: ["ignore", "pipe", "pipe"],
   });
 
   const pipeWithPrefix = (stream, prefix, target) => {
-    const rl = readline.createInterface({input: stream});
-    rl.on('line', line => {
+    const rl = readline.createInterface({ input: stream });
+    rl.on("line", (line) => {
       target.write(`[${prefix}] ${line}\n`);
     });
   };
@@ -83,35 +83,35 @@ const spawnLongRunning = (command, args, label) => {
   return child;
 };
 
-const killProcess = child => {
+const killProcess = (child) => {
   if (!child || child.killed) {
     return;
   }
 
   if (isWindows) {
-    spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], {
+    spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], {
       windowsHide: true,
       shell: true,
-      stdio: 'ignore',
+      stdio: "ignore",
     });
   } else {
-    child.kill('SIGTERM');
+    child.kill("SIGTERM");
   }
 };
 
-const isPortInUse = port =>
-  new Promise(resolve => {
-    const socket = net.createConnection({host: '127.0.0.1', port}, () => {
+const isPortInUse = (port) =>
+  new Promise((resolve) => {
+    const socket = net.createConnection({ host: "127.0.0.1", port }, () => {
       socket.destroy();
       resolve(true);
     });
 
-    socket.on('error', () => {
+    socket.on("error", () => {
       resolve(false);
     });
   });
 
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const runCommandCapture = (command, args, label, cwd) =>
   new Promise((resolve, reject) => {
@@ -119,74 +119,76 @@ const runCommandCapture = (command, args, label, cwd) =>
       cwd,
       shell: true,
       windowsHide: true,
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: ["ignore", "pipe", "pipe"],
     });
 
-    let stdout = '';
-    let stderr = '';
+    let stdout = "";
+    let stderr = "";
 
-    child.stdout.on('data', chunk => {
+    child.stdout.on("data", (chunk) => {
       stdout += chunk.toString();
     });
 
-    child.stderr.on('data', chunk => {
+    child.stderr.on("data", (chunk) => {
       stderr += chunk.toString();
     });
 
-    child.on('error', reject);
-    child.on('close', code => {
+    child.on("error", reject);
+    child.on("close", (code) => {
       if (code === 0) {
         resolve(stdout.trim());
       } else {
         reject(
           new Error(
-            `${label} exited with code ${code}${stderr ? `: ${stderr.trim()}` : ''}`,
-          ),
+            `${label} exited with code ${code}${
+              stderr ? `: ${stderr.trim()}` : ""
+            }`
+          )
         );
       }
     });
   });
 
-const getSdkDirFromLocalProperties = androidProjectDir => {
-  const localPropertiesPath = path.join(androidProjectDir, 'local.properties');
+const getSdkDirFromLocalProperties = (androidProjectDir) => {
+  const localPropertiesPath = path.join(androidProjectDir, "local.properties");
   if (!fs.existsSync(localPropertiesPath)) {
     return null;
   }
 
-  const content = fs.readFileSync(localPropertiesPath, 'utf8');
+  const content = fs.readFileSync(localPropertiesPath, "utf8");
   const sdkDirLine = content
     .split(/\r?\n/)
-    .find(line => line.trim().startsWith('sdk.dir='));
+    .find((line) => line.trim().startsWith("sdk.dir="));
 
   if (!sdkDirLine) {
     return null;
   }
 
-  const rawValue = sdkDirLine.slice('sdk.dir='.length).trim();
+  const rawValue = sdkDirLine.slice("sdk.dir=".length).trim();
   if (!rawValue) {
     return null;
   }
 
-  return rawValue.replace(/\\:/g, ':').replace(/\\\\/g, '\\');
+  return rawValue.replace(/\\:/g, ":").replace(/\\\\/g, "\\");
 };
 
-const getSdkCandidates = androidProjectDir =>
+const getSdkCandidates = (androidProjectDir) =>
   [
     getSdkDirFromLocalProperties(androidProjectDir),
     process.env.ANDROID_HOME,
     process.env.ANDROID_SDK_ROOT,
     isWindows
-      ? path.join(process.env.LOCALAPPDATA || '', 'Android', 'Sdk')
-      : path.join(process.env.HOME || '', 'Android', 'Sdk'),
+      ? path.join(process.env.LOCALAPPDATA || "", "Android", "Sdk")
+      : path.join(process.env.HOME || "", "Android", "Sdk"),
   ].filter(Boolean);
 
-const resolveAdbCommand = androidProjectDir => {
+const resolveAdbCommand = (androidProjectDir) => {
   const sdkCandidates = getSdkCandidates(androidProjectDir);
 
-  const adbFileName = isWindows ? 'adb.exe' : 'adb';
+  const adbFileName = isWindows ? "adb.exe" : "adb";
 
   for (const sdkDir of sdkCandidates) {
-    const adbPath = path.join(sdkDir, 'platform-tools', adbFileName);
+    const adbPath = path.join(sdkDir, "platform-tools", adbFileName);
     if (fs.existsSync(adbPath)) {
       return adbPath;
     }
@@ -195,12 +197,12 @@ const resolveAdbCommand = androidProjectDir => {
   return null;
 };
 
-const resolveEmulatorCommand = androidProjectDir => {
+const resolveEmulatorCommand = (androidProjectDir) => {
   const sdkCandidates = getSdkCandidates(androidProjectDir);
-  const emulatorFileName = isWindows ? 'emulator.exe' : 'emulator';
+  const emulatorFileName = isWindows ? "emulator.exe" : "emulator";
 
   for (const sdkDir of sdkCandidates) {
-    const emulatorPath = path.join(sdkDir, 'emulator', emulatorFileName);
+    const emulatorPath = path.join(sdkDir, "emulator", emulatorFileName);
     if (fs.existsSync(emulatorPath)) {
       return emulatorPath;
     }
@@ -209,42 +211,48 @@ const resolveEmulatorCommand = androidProjectDir => {
   return null;
 };
 
-const parseConnectedDeviceIds = adbDevicesOutput =>
+const parseConnectedDeviceIds = (adbDevicesOutput) =>
   adbDevicesOutput
     .split(/\r?\n/)
-    .map(line => line.trim())
-    .filter(line => line && !line.startsWith('List of devices attached'))
-    .map(line => line.split(/\s+/))
-    .filter(parts => parts.length >= 2 && parts[1] === 'device')
-    .map(parts => parts[0]);
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("List of devices attached"))
+    .map((line) => line.split(/\s+/))
+    .filter((parts) => parts.length >= 2 && parts[1] === "device")
+    .map((parts) => parts[0]);
 
-const getConnectedDeviceIds = async adbCommand => {
-  const output = await runCommandCapture(adbCommand, ['devices'], 'android-devices');
+const getConnectedDeviceIds = async (adbCommand) => {
+  const output = await runCommandCapture(
+    adbCommand,
+    ["devices"],
+    "android-devices"
+  );
   return parseConnectedDeviceIds(output);
 };
 
-const selectAvdName = async emulatorCommand => {
+const selectAvdName = async (emulatorCommand) => {
   const requestedAvd = process.env.ANDROID_AVD_NAME?.trim();
   const avdOutput = await runCommandCapture(
     emulatorCommand,
-    ['-list-avds'],
-    'android-avds',
+    ["-list-avds"],
+    "android-avds"
   );
   const avdNames = avdOutput
     .split(/\r?\n/)
-    .map(name => name.trim())
+    .map((name) => name.trim())
     .filter(Boolean);
 
   if (avdNames.length === 0) {
     throw new Error(
-      'No Android Virtual Devices found. Create an AVD in Android Studio Device Manager first.',
+      "No Android Virtual Devices found. Create an AVD in Android Studio Device Manager first."
     );
   }
 
   if (requestedAvd) {
     if (!avdNames.includes(requestedAvd)) {
       throw new Error(
-        `ANDROID_AVD_NAME='${requestedAvd}' was not found. Available AVDs: ${avdNames.join(', ')}`,
+        `ANDROID_AVD_NAME='${requestedAvd}' was not found. Available AVDs: ${avdNames.join(
+          ", "
+        )}`
       );
     }
 
@@ -254,7 +262,7 @@ const selectAvdName = async emulatorCommand => {
   return avdNames[0];
 };
 
-const waitForDeviceOnline = async adbCommand => {
+const waitForDeviceOnline = async (adbCommand) => {
   const maxChecks = 90;
 
   for (let i = 0; i < maxChecks; i += 1) {
@@ -266,7 +274,7 @@ const waitForDeviceOnline = async adbCommand => {
     await sleep(2000);
   }
 
-  throw new Error('Timed out waiting for an Android device to connect.');
+  throw new Error("Timed out waiting for an Android device to connect.");
 };
 
 const waitForBootCompleted = async (adbCommand, deviceId) => {
@@ -275,78 +283,98 @@ const waitForBootCompleted = async (adbCommand, deviceId) => {
   for (let i = 0; i < maxChecks; i += 1) {
     const bootStatus = await runCommandCapture(
       adbCommand,
-      ['-s', deviceId, 'shell', 'getprop', 'sys.boot_completed'],
-      'android-boot',
+      ["-s", deviceId, "shell", "getprop", "sys.boot_completed"],
+      "android-boot"
     );
 
-    if (bootStatus.trim() === '1') {
+    if (bootStatus.trim() === "1") {
       return;
     }
 
     await sleep(2000);
   }
 
-  throw new Error('Timed out waiting for Android emulator to finish booting.');
+  throw new Error("Timed out waiting for Android emulator to finish booting.");
 };
 
 const ensureAndroidDevice = async (adbCommand, emulatorCommand) => {
   const existingDevices = await getConnectedDeviceIds(adbCommand);
   if (existingDevices.length > 0) {
-    process.stdout.write(`[android-device] Using connected device ${existingDevices[0]}\n`);
+    process.stdout.write(
+      `[android-device] Using connected device ${existingDevices[0]}\n`
+    );
     return existingDevices[0];
   }
 
   if (!emulatorCommand) {
     throw new Error(
-      'No connected Android devices and unable to locate emulator executable in Android SDK.',
+      "No connected Android devices and unable to locate emulator executable in Android SDK."
     );
   }
 
   const avdName = await selectAvdName(emulatorCommand);
-  process.stdout.write(`[android-device] No connected device found. Starting emulator '${avdName}'...\n`);
+  process.stdout.write(
+    `[android-device] No connected device found. Starting emulator '${avdName}'...\n`
+  );
 
-  const emulatorProcess = spawn(emulatorCommand, ['-avd', avdName], {
+  const emulatorProcess = spawn(emulatorCommand, ["-avd", avdName], {
     shell: false,
     windowsHide: true,
     detached: true,
-    stdio: 'ignore',
+    stdio: "ignore",
   });
   emulatorProcess.unref();
 
   const deviceId = await waitForDeviceOnline(adbCommand);
-  process.stdout.write(`[android-device] Device connected: ${deviceId}. Waiting for boot...\n`);
+  process.stdout.write(
+    `[android-device] Device connected: ${deviceId}. Waiting for boot...\n`
+  );
   await waitForBootCompleted(adbCommand, deviceId);
-  process.stdout.write('[android-device] Emulator boot completed.\n');
+  process.stdout.write("[android-device] Emulator boot completed.\n");
 
   return deviceId;
 };
 
 const main = async () => {
   try {
-    await runCommand('docker', ['compose', 'up', '-d', 'db', 'backend'], 'stack');
+    await runCommand(
+      "docker",
+      ["compose", "up", "-d", "db", "backend"],
+      "stack"
+    );
 
     const backendLogs = spawnLongRunning(
-      'docker',
-      ['compose', 'logs', '-f', '--tail', '50', 'backend'],
-      'backend',
+      "docker",
+      ["compose", "logs", "-f", "--tail", "50", "backend"],
+      "backend"
     );
 
     let metro = null;
     const metroAlreadyRunning = await isPortInUse(8081);
     if (metroAlreadyRunning) {
-      process.stdout.write('[metro] Existing Metro detected on port 8081. Reusing it.\n');
+      process.stdout.write(
+        "[metro] Existing Metro detected on port 8081. Reusing it.\n"
+      );
     } else {
-      metro = spawnLongRunning('npm', ['--prefix', 'projectBinx', 'run', 'start'], 'metro');
+      metro = spawnLongRunning(
+        "npm",
+        ["--prefix", "projectBinx", "run", "start"],
+        "metro"
+      );
     }
 
-    const androidProjectDir = path.join(process.cwd(), 'projectBinx', 'android');
-    const gradleCommand = isWindows ? 'gradlew.bat' : './gradlew';
+    const androidProjectDir = path.join(
+      process.cwd(),
+      "projectBinx",
+      "android"
+    );
+    const gradleCommand = isWindows ? "gradlew.bat" : "./gradlew";
     const adbCommand = resolveAdbCommand(androidProjectDir);
     const emulatorCommand = resolveEmulatorCommand(androidProjectDir);
 
     if (!adbCommand) {
       throw new Error(
-        'Unable to locate adb. Install Android SDK Platform-Tools and ensure sdk.dir is set in projectBinx/android/local.properties.',
+        "Unable to locate adb. Install Android SDK Platform-Tools and ensure sdk.dir is set in projectBinx/android/local.properties."
       );
     }
 
@@ -354,24 +382,29 @@ const main = async () => {
 
     const deviceId = await ensureAndroidDevice(adbCommand, emulatorCommand);
 
-    await runCommandInDir(gradleCommand, ['app:installDebug'], 'android-build', androidProjectDir);
+    await runCommandInDir(
+      gradleCommand,
+      ["app:installDebug"],
+      "android-build",
+      androidProjectDir
+    );
     await runCommand(
       adbCommand,
-      ['-s', deviceId, 'reverse', 'tcp:8081', 'tcp:8081'],
-      'android-bridge',
+      ["-s", deviceId, "reverse", "tcp:8081", "tcp:8081"],
+      "android-bridge"
     );
     await runCommand(
       adbCommand,
       [
-        '-s',
+        "-s",
         deviceId,
-        'shell',
-        'am',
-        'start',
-        '-n',
-        'com.projectbinx/com.projectbinx.MainActivity',
+        "shell",
+        "am",
+        "start",
+        "-n",
+        "com.projectbinx/com.projectbinx.MainActivity",
       ],
-      'android-launch',
+      "android-launch"
     );
 
     const shutdown = () => {
@@ -380,11 +413,11 @@ const main = async () => {
       process.exit(0);
     };
 
-    process.on('SIGINT', shutdown);
-    process.on('SIGTERM', shutdown);
+    process.on("SIGINT", shutdown);
+    process.on("SIGTERM", shutdown);
 
     if (metro) {
-      metro.on('close', code => {
+      metro.on("close", (code) => {
         if (code && code !== 0) {
           killProcess(backendLogs);
           process.exit(code);
@@ -392,7 +425,7 @@ const main = async () => {
       });
     }
 
-    backendLogs.on('close', code => {
+    backendLogs.on("close", (code) => {
       if (code && code !== 0) {
         killProcess(metro);
         process.exit(code);

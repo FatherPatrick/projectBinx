@@ -8,11 +8,15 @@ services:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
     ports:
-      - '${DB_PORT:-5432}:5432'
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - projectbinx_db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-projectbinx}']
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-projectbinx}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -34,9 +38,9 @@ services:
       DB_NAME: ${DB_NAME:-projectbinx}
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
-      DB_SSL: 'false'
+      DB_SSL: "false"
     ports:
-      - '4000:4000'
+      - "4000:4000"
 
 volumes:
   projectbinx_db_data:

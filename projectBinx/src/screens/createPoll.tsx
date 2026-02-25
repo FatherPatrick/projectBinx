@@ -32,7 +32,13 @@ type SimplePollPreset = (typeof simplePollPresets)[number];
 
 const defaultOptionsByType: Record<PollType, string[]> = {
   simple: ['Yes', 'No'],
-  slider: ['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree'],
+  slider: [
+    'Strongly Disagree',
+    'Disagree',
+    'Neutral',
+    'Agree',
+    'Strongly Agree',
+  ],
   multi: ['', ''],
 };
 
@@ -48,9 +54,8 @@ const CreatePoll: React.FC<Props> = ({navigation}) => {
   const [pollType, setPollType] = useState<PollType>('simple');
   const [allowComments, setAllowComments] = useState(true);
   const [simplePreset, setSimplePreset] = useState<SimplePollPreset>('yes-no');
-  const [optionsByType, setOptionsByType] = useState<Record<PollType, string[]>>(
-    defaultOptionsByType,
-  );
+  const [optionsByType, setOptionsByType] =
+    useState<Record<PollType, string[]>>(defaultOptionsByType);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -208,8 +213,14 @@ const CreatePoll: React.FC<Props> = ({navigation}) => {
 
         <View>
           {previewOptions.map((option, index) => (
-            <View key={`${option}-${index}`} style={pollStyles.optionButtonBase}>
-              <View style={[pollStyles.radioOuter, pollStyles.radioOuterUnselected]}>
+            <View
+              key={`${option}-${index}`}
+              style={pollStyles.optionButtonBase}>
+              <View
+                style={[
+                  pollStyles.radioOuter,
+                  pollStyles.radioOuterUnselected,
+                ]}>
                 <View style={styles.multiPreviewRadioInner} />
               </View>
               <Text style={pollStyles.optionText}>{option}</Text>
@@ -241,11 +252,16 @@ const CreatePoll: React.FC<Props> = ({navigation}) => {
     }
 
     if (cleanedOptions.length > maxOptions) {
-      setErrorMessage(`A ${pollType} poll can have up to ${maxOptions} options.`);
+      setErrorMessage(
+        `A ${pollType} poll can have up to ${maxOptions} options.`,
+      );
       return;
     }
 
-    if (pollType === 'slider' && cleanedOptions.length !== FIXED_SLIDER_OPTIONS) {
+    if (
+      pollType === 'slider' &&
+      cleanedOptions.length !== FIXED_SLIDER_OPTIONS
+    ) {
       setErrorMessage(
         `A slider poll must have exactly ${FIXED_SLIDER_OPTIONS} options.`,
       );
@@ -292,181 +308,188 @@ const CreatePoll: React.FC<Props> = ({navigation}) => {
       <ScrollView
         style={styles.formScroll}
         keyboardShouldPersistTaps="handled"
+        overScrollMode="always"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.container,
           hasInteracted ? styles.containerWithStickyPreview : null,
         ]}>
-      <Text style={[globalStyles.title, styles.title]}>Create Poll</Text>
+        <Text style={[globalStyles.title, styles.title]}>Create Poll</Text>
 
-      <Text style={globalStyles.sectionTitle}>Poll Type</Text>
-      <View style={styles.pollTypeRow}>
-        {pollTypeOptions.map(type => {
-          const isSelected = pollType === type;
-          return (
-            <TouchableOpacity
-              key={type}
-              style={[
-                styles.pollTypeButton,
-                isSelected
-                  ? styles.pollTypeButtonSelected
-                  : styles.pollTypeButtonUnselected,
-              ]}
-              onPress={() => handlePollTypeSelect(type)}>
-              <Text
+        <Text style={globalStyles.sectionTitle}>Poll Type</Text>
+        <View style={styles.pollTypeRow}>
+          {pollTypeOptions.map(type => {
+            const isSelected = pollType === type;
+            return (
+              <TouchableOpacity
+                key={type}
                 style={[
-                  styles.pollTypeButtonText,
+                  styles.pollTypeButton,
                   isSelected
-                    ? styles.pollTypeButtonTextSelected
-                    : styles.pollTypeButtonTextUnselected,
-                ]}>
-                {type.toUpperCase()}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+                    ? styles.pollTypeButtonSelected
+                    : styles.pollTypeButtonUnselected,
+                ]}
+                onPress={() => handlePollTypeSelect(type)}>
+                <Text
+                  style={[
+                    styles.pollTypeButtonText,
+                    isSelected
+                      ? styles.pollTypeButtonTextSelected
+                      : styles.pollTypeButtonTextUnselected,
+                  ]}>
+                  {type.toUpperCase()}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
-      <Text style={styles.pollTypeHelpText}>{pollTypeHelperText[pollType]}</Text>
+        <Text style={styles.pollTypeHelpText}>
+          {pollTypeHelperText[pollType]}
+        </Text>
 
-      <TextInput
-        style={globalStyles.input}
-        placeholder="Poll title"
-        value={title}
-        onChangeText={text => {
-          setHasInteracted(true);
-          setTitle(text);
-          if (errorMessage) {
-            setErrorMessage(null);
-          }
-        }}
-      />
-
-      {isSliderPoll ? (
         <TextInput
           style={globalStyles.input}
-          placeholder="Question"
-          value={description}
+          placeholder="Poll title"
+          value={title}
           onChangeText={text => {
             setHasInteracted(true);
-            setDescription(text);
+            setTitle(text);
+            if (errorMessage) {
+              setErrorMessage(null);
+            }
           }}
         />
-      ) : (
-        <TextInput
-          style={[globalStyles.input, styles.descriptionInput]}
-          placeholder="Description (optional)"
-          value={description}
-          onChangeText={text => {
-            setHasInteracted(true);
-            setDescription(text);
-          }}
-          multiline={true}
-        />
-      )}
 
-      <View style={styles.toggleRow}>
-        <Text style={styles.toggleLabel}>Allow comments</Text>
-        <Switch
-          value={allowComments}
-          onValueChange={value => {
-            setHasInteracted(true);
-            setAllowComments(value);
-          }}
-        />
-      </View>
+        {isSliderPoll ? (
+          <TextInput
+            style={globalStyles.input}
+            placeholder="Question"
+            value={description}
+            onChangeText={text => {
+              setHasInteracted(true);
+              setDescription(text);
+            }}
+          />
+        ) : (
+          <TextInput
+            style={[globalStyles.input, styles.descriptionInput]}
+            placeholder="Description (optional)"
+            value={description}
+            onChangeText={text => {
+              setHasInteracted(true);
+              setDescription(text);
+            }}
+            multiline={true}
+          />
+        )}
 
-      {isSimplePoll ? (
-        <>
-          <Text style={globalStyles.sectionTitle}>Simple Poll Options</Text>
-          <View style={styles.simplePresetRow}>
-            <TouchableOpacity
-              style={[
-                styles.simplePresetButton,
-                simplePreset === 'yes-no'
-                  ? styles.pollTypeButtonSelected
-                  : styles.pollTypeButtonUnselected,
-              ]}
-              onPress={() => handleSimplePresetSelect('yes-no')}>
-              <Text
-                style={
-                  simplePreset === 'yes-no'
-                    ? styles.pollTypeButtonTextSelected
-                    : styles.pollTypeButtonTextUnselected
-                }>
-                YES / NO
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.simplePresetButton,
-                simplePreset === 'up-down'
-                  ? styles.pollTypeButtonSelected
-                  : styles.pollTypeButtonUnselected,
-              ]}
-              onPress={() => handleSimplePresetSelect('up-down')}>
-              <Text
-                style={
-                  simplePreset === 'up-down'
-                    ? styles.pollTypeButtonTextSelected
-                    : styles.pollTypeButtonTextUnselected
-                }>
-                UP / DOWN
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </>
-      ) : null}
+        <View style={styles.toggleRow}>
+          <Text style={styles.toggleLabel}>Allow comments</Text>
+          <Switch
+            value={allowComments}
+            onValueChange={value => {
+              setHasInteracted(true);
+              setAllowComments(value);
+            }}
+          />
+        </View>
 
-      {pollType === 'multi' ? (
-        <>
-          <Text style={globalStyles.sectionTitle}>
-            Options ({options.length}/{maxOptions})
-          </Text>
-          {options.map((option, index) => (
-            <View key={index} style={styles.optionRow}>
-              <TextInput
-                style={styles.optionInput}
-                placeholder={getOptionPlaceholder(index)}
-                value={option}
-                onChangeText={text => {
-                  updateOption(index, text);
-                  if (errorMessage) {
-                    setErrorMessage(null);
-                  }
-                }}
-              />
+        {isSimplePoll ? (
+          <>
+            <Text style={globalStyles.sectionTitle}>Simple Poll Options</Text>
+            <View style={styles.simplePresetRow}>
               <TouchableOpacity
                 style={[
-                  styles.removeButton,
-                  options.length <= minOptions ? styles.removeButtonDisabled : null,
+                  styles.simplePresetButton,
+                  simplePreset === 'yes-no'
+                    ? styles.pollTypeButtonSelected
+                    : styles.pollTypeButtonUnselected,
                 ]}
-                disabled={options.length <= minOptions}
-                onPress={() => removeOption(index)}>
-                <Text style={styles.removeButtonText}>Remove</Text>
+                onPress={() => handleSimplePresetSelect('yes-no')}>
+                <Text
+                  style={
+                    simplePreset === 'yes-no'
+                      ? styles.pollTypeButtonTextSelected
+                      : styles.pollTypeButtonTextUnselected
+                  }>
+                  YES / NO
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.simplePresetButton,
+                  simplePreset === 'up-down'
+                    ? styles.pollTypeButtonSelected
+                    : styles.pollTypeButtonUnselected,
+                ]}
+                onPress={() => handleSimplePresetSelect('up-down')}>
+                <Text
+                  style={
+                    simplePreset === 'up-down'
+                      ? styles.pollTypeButtonTextSelected
+                      : styles.pollTypeButtonTextUnselected
+                  }>
+                  UP / DOWN
+                </Text>
               </TouchableOpacity>
             </View>
-          ))}
+          </>
+        ) : null}
 
-          <TouchableOpacity
-            style={[
-              styles.addButton,
-              options.length >= maxOptions ? styles.addButtonDisabled : null,
-            ]}
-            disabled={options.length >= maxOptions}
-            onPress={addOption}>
-            <Text style={styles.addButtonText}>Add Option</Text>
-          </TouchableOpacity>
-        </>
-      ) : null}
+        {pollType === 'multi' ? (
+          <>
+            <Text style={globalStyles.sectionTitle}>
+              Options ({options.length}/{maxOptions})
+            </Text>
+            {options.map((option, index) => (
+              <View key={index} style={styles.optionRow}>
+                <TextInput
+                  style={styles.optionInput}
+                  placeholder={getOptionPlaceholder(index)}
+                  value={option}
+                  onChangeText={text => {
+                    updateOption(index, text);
+                    if (errorMessage) {
+                      setErrorMessage(null);
+                    }
+                  }}
+                />
+                <TouchableOpacity
+                  style={[
+                    styles.removeButton,
+                    options.length <= minOptions
+                      ? styles.removeButtonDisabled
+                      : null,
+                  ]}
+                  disabled={options.length <= minOptions}
+                  onPress={() => removeOption(index)}>
+                  <Text style={styles.removeButtonText}>Remove</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
 
-      {errorMessage ? <Text style={globalStyles.errorText}>{errorMessage}</Text> : null}
+            <TouchableOpacity
+              style={[
+                styles.addButton,
+                options.length >= maxOptions ? styles.addButtonDisabled : null,
+              ]}
+              disabled={options.length >= maxOptions}
+              onPress={addOption}>
+              <Text style={styles.addButtonText}>Add Option</Text>
+            </TouchableOpacity>
+          </>
+        ) : null}
 
-      <Button
-        title={isSubmitting ? 'Creating Poll...' : 'Create Poll'}
-        disabled={isSubmitting}
-        onPress={handleCreatePoll}
-      />
+        {errorMessage ? (
+          <Text style={globalStyles.errorText}>{errorMessage}</Text>
+        ) : null}
+
+        <Button
+          title={isSubmitting ? 'Creating Poll...' : 'Create Poll'}
+          disabled={isSubmitting}
+          onPress={handleCreatePoll}
+        />
       </ScrollView>
 
       {hasInteracted ? (
@@ -478,6 +501,7 @@ const CreatePoll: React.FC<Props> = ({navigation}) => {
               contentContainerStyle={styles.stickyPreviewBodyContent}
               nestedScrollEnabled={true}
               keyboardShouldPersistTaps="handled"
+              overScrollMode="always"
               showsVerticalScrollIndicator={false}>
               {renderPostPreview()}
             </ScrollView>

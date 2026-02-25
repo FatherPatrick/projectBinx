@@ -1,8 +1,12 @@
 import axios from 'axios';
 import {Polls} from '../uri';
 import {
+  CommentReactionSummary,
+  PollComment,
   PollData,
+  PollReactionSummary,
   PollQueryParams,
+  ReactionType,
   PollResult,
   VoteRequest,
 } from '../types/pollTypes';
@@ -70,6 +74,159 @@ const PollService = {
       return response.data;
     } catch (error) {
       throw toServiceError(error, 'Unable to fetch poll results right now.');
+    }
+  },
+
+  getCommentsByPollId: async (
+    id: number,
+    viewerName?: string,
+    params?: {page?: number; pageSize?: number},
+  ): Promise<PollComment[]> => {
+    try {
+      const url = Polls.getCommentsByPollId.replace(':id', String(id));
+      const response = await axios.get(url, {
+        params: {
+          ...(viewerName ? {viewerName} : {}),
+          ...(params?.page !== undefined ? {page: params.page} : {}),
+          ...(params?.pageSize !== undefined
+            ? {pageSize: params.pageSize}
+            : {}),
+        },
+      });
+      return response.data;
+    } catch (error) {
+      throw toServiceError(error, 'Unable to fetch comments right now.');
+    }
+  },
+
+  createCommentByPollId: async (
+    id: number,
+    payload: {authorName: string; content: string; parentCommentId?: number},
+  ): Promise<PollComment> => {
+    try {
+      const url = Polls.createCommentByPollId.replace(':id', String(id));
+      const response = await axios.post(url, payload);
+      return response.data;
+    } catch (error) {
+      throw toServiceError(error, 'Unable to create comment right now.');
+    }
+  },
+
+  deleteCommentById: async (
+    pollId: number,
+    commentId: number,
+    actorName: string,
+  ) => {
+    try {
+      const url = Polls.deleteCommentById
+        .replace(':pollId', String(pollId))
+        .replace(':commentId', String(commentId));
+      const response = await axios.delete(url, {data: {actorName}});
+      return response.data;
+    } catch (error) {
+      throw toServiceError(error, 'Unable to delete comment right now.');
+    }
+  },
+
+  getPollReactionById: async (
+    id: number,
+    viewerName?: string,
+  ): Promise<PollReactionSummary> => {
+    try {
+      const url = Polls.getPollReactionById.replace(':id', String(id));
+      const response = await axios.get(url, {
+        params: viewerName ? {viewerName} : undefined,
+      });
+      return response.data;
+    } catch (error) {
+      throw toServiceError(error, 'Unable to fetch poll reaction right now.');
+    }
+  },
+
+  setPollReactionById: async (
+    id: number,
+    reactorName: string,
+    reaction: ReactionType,
+  ): Promise<PollReactionSummary> => {
+    try {
+      const url = Polls.setPollReactionById.replace(':id', String(id));
+      const response = await axios.post(url, {reactorName, reaction});
+      return response.data;
+    } catch (error) {
+      throw toServiceError(error, 'Unable to update poll reaction right now.');
+    }
+  },
+
+  clearPollReactionById: async (
+    id: number,
+    reactorName: string,
+  ): Promise<PollReactionSummary> => {
+    try {
+      const url = Polls.clearPollReactionById.replace(':id', String(id));
+      const response = await axios.delete(url, {data: {reactorName}});
+      return response.data;
+    } catch (error) {
+      throw toServiceError(error, 'Unable to clear poll reaction right now.');
+    }
+  },
+
+  getCommentReactionById: async (
+    commentId: number,
+    viewerName?: string,
+  ): Promise<CommentReactionSummary> => {
+    try {
+      const url = Polls.getCommentReactionById.replace(
+        ':commentId',
+        String(commentId),
+      );
+      const response = await axios.get(url, {
+        params: viewerName ? {viewerName} : undefined,
+      });
+      return response.data;
+    } catch (error) {
+      throw toServiceError(
+        error,
+        'Unable to fetch comment reaction right now.',
+      );
+    }
+  },
+
+  setCommentReactionById: async (
+    commentId: number,
+    reactorName: string,
+    reaction: ReactionType,
+  ): Promise<CommentReactionSummary> => {
+    try {
+      const url = Polls.setCommentReactionById.replace(
+        ':commentId',
+        String(commentId),
+      );
+      const response = await axios.post(url, {reactorName, reaction});
+      return response.data;
+    } catch (error) {
+      throw toServiceError(
+        error,
+        'Unable to update comment reaction right now.',
+      );
+    }
+  },
+
+  clearCommentReactionById: async (
+    commentId: number,
+    reactorName: string,
+  ): Promise<CommentReactionSummary> => {
+    try {
+      const url = Polls.clearCommentReactionById.replace(
+        ':commentId',
+        String(commentId),
+      );
+      const response = await axios.delete(url, {data: {reactorName}});
+      return response.data;
+    } catch (error) {
+      throw toServiceError(
+        error,
+        'Unable to clear comment reaction right now.',
+      );
     }
   },
 };

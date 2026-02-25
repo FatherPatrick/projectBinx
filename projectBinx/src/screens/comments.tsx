@@ -1,5 +1,6 @@
-import React, {useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   ListRenderItem,
   StyleSheet,
@@ -16,11 +17,14 @@ import SimplePoll from '../components/pollTypes/simplePoll';
 import SliderPoll from '../components/pollTypes/sliderPoll';
 import MultiPoll from '../components/pollTypes/multiPoll';
 import {MoreOptionsButton} from '../components/moreOptionsButton';
+import PollService from '../services/pollService';
 import SessionService from '../services/sessionService';
 import theme from '../styles/theme';
+import {PollComment} from '../types/pollTypes';
 
 interface CommentData {
   id: string;
+  commentId?: number;
   username: string;
   content: string;
   likes: number;
@@ -42,39 +46,144 @@ interface Props {
 }
 
 const Comments: React.FC<Props> = ({route, navigation}) => {
+  const PAGE_SIZE = 25;
   const {poll} = route.params;
   const currentUsername =
     SessionService.getCurrentUser()?.username ?? 'current_user';
 
-  const [comments, setComments] = useState<CommentData[]>([
-    {
-      id: '1',
-      username: 'alex_s',
-      content: 'Interesting poll. I can see both sides here.',
-      likes: 4,
-      dislikes: 0,
-      likedByCurrentUser: false,
-      dislikedByCurrentUser: false,
+  const [comments, setComments] = useState<CommentData[]>([]);
+  const [totalCommentCount, setTotalCommentCount] = useState(
+    poll.commentCount ?? 0,
+  );
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [initialLoadError, setInitialLoadError] = useState<string | null>(null);
+  const hasUserScrolledRef = useRef(false);
+
+  const requestWithRetry = async <T,>(
+    request: () => Promise<T>,
+    retries = 1,
+  ): Promise<T> => {
+    try {
+      return await request();
+    } catch (error) {
+      if (retries <= 0) {
+        throw error;
+      }
+
+      return requestWithRetry(request, retries - 1);
+    }
+  };
+
+  const mapPollCommentToUi = (comment: PollComment): CommentData => ({
+    id: String(comment.commentId),
+    commentId: comment.commentId,
+    username: comment.authorName,
+    content: comment.content,
+    likes: comment.likes,
+    dislikes: comment.dislikes,
+    likedByCurrentUser: comment.viewerReaction === 'like',
+    dislikedByCurrentUser: comment.viewerReaction === 'dislike',
+  });
+
+  const mergeCommentsFromServer = (
+    incomingComments: CommentData[],
+    append: boolean,
+  ) => {
+    setComments(previousComments => {
+      const draftComments = previousComments.filter(comment => comment.isDraft);
+      const persistedComments = previousComments.filter(
+        comment => !comment.isDraft,
+      );
+
+      if (!append) {
+        return [...draftComments, ...incomingComments];
+      }
+
+      const existingIds = new Set(persistedComments.map(comment => comment.id));
+      const uniqueIncoming = incomingComments.filter(comment => {
+        if (existingIds.has(comment.id)) {
+          return false;
+        }
+
+        existingIds.add(comment.id);
+        return true;
+      });
+
+      return [...draftComments, ...persistedComments, ...uniqueIncoming];
+    });
+  };
+
+  const fetchCommentsPage = useCallback(
+    async ({pageToLoad, append}: {pageToLoad: number; append: boolean}) => {
+      if (poll.pollId === undefined) {
+        setComments([]);
+        setHasMore(false);
+        setIsLoadingMore(false);
+        setIsInitialLoading(false);
+        setInitialLoadError(null);
+        return;
+      }
+
+      try {
+        if (!append) {
+          setInitialLoadError(null);
+        }
+
+        const response = await PollService.getCommentsByPollId(
+          poll.pollId,
+          currentUsername,
+          {
+            page: pageToLoad,
+            pageSize: PAGE_SIZE,
+          },
+        );
+
+        const mappedComments = response.map(mapPollCommentToUi);
+        mergeCommentsFromServer(mappedComments, append);
+        setPage(pageToLoad);
+        setHasMore(mappedComments.length === PAGE_SIZE);
+      } catch (error) {
+        setHasMore(false);
+        if (!append) {
+          setInitialLoadError('Unable to load comments right now.');
+        }
+        if (!append) {
+          setComments(previousComments =>
+            previousComments.filter(comment => comment.isDraft),
+          );
+        }
+      } finally {
+        setIsLoadingMore(false);
+        setIsInitialLoading(false);
+      }
     },
-    {
-      id: '2',
-      username: 'maya_k',
-      content: 'I voted already. Curious what others think too.',
-      likes: 2,
-      dislikes: 1,
-      likedByCurrentUser: false,
-      dislikedByCurrentUser: false,
-    },
-    {
-      id: '3',
-      username: 'john_d',
-      content: 'Could use more options, but still good question.',
-      likes: 1,
-      dislikes: 0,
-      likedByCurrentUser: false,
-      dislikedByCurrentUser: false,
-    },
-  ]);
+    [PAGE_SIZE, currentUsername, poll.pollId],
+  );
+
+  useEffect(() => {
+    setTotalCommentCount(poll.commentCount ?? 0);
+    setPage(1);
+    setHasMore(true);
+    setIsInitialLoading(true);
+    hasUserScrolledRef.current = false;
+    fetchCommentsPage({pageToLoad: 1, append: false});
+  }, [fetchCommentsPage, poll.commentCount]);
+
+  const handleLoadMore = () => {
+    if (!hasUserScrolledRef.current) {
+      return;
+    }
+
+    if (isInitialLoading || isLoadingMore || !hasMore) {
+      return;
+    }
+
+    setIsLoadingMore(true);
+    fetchCommentsPage({pageToLoad: page + 1, append: true});
+  };
 
   const renderPoll = (item: PollData) => {
     if (item.type === 'simple') {
@@ -137,19 +246,72 @@ const Comments: React.FC<Props> = ({route, navigation}) => {
   };
 
   const handleSaveDraft = (commentId: string) => {
-    setComments(previousComments =>
-      previousComments.map(comment => {
+    const draftComment = comments.find(comment => comment.id === commentId);
+
+    if (!draftComment) {
+      return;
+    }
+
+    const trimmedContent = draftComment.content.trim();
+
+    if (!trimmedContent) {
+      return;
+    }
+
+    if (poll.pollId === undefined) {
+      setComments(previousComments =>
+        previousComments.map(comment => {
+          if (comment.id !== commentId) {
+            return comment;
+          }
+
+          return {
+            ...comment,
+            content: trimmedContent,
+            isDraft: false,
+          };
+        }),
+      );
+      return;
+    }
+
+    const previousComments = comments;
+
+    setComments(previousCommentsState =>
+      previousCommentsState.map(comment => {
         if (comment.id !== commentId) {
           return comment;
         }
 
         return {
           ...comment,
-          content: comment.content.trim(),
+          content: trimmedContent,
           isDraft: false,
         };
       }),
     );
+
+    requestWithRetry(
+      () =>
+        PollService.createCommentByPollId(poll.pollId!, {
+          authorName: currentUsername,
+          content: trimmedContent,
+        }),
+      1,
+    )
+      .then(createdComment => {
+        setComments(currentComments =>
+          currentComments.map(comment =>
+            comment.id === commentId
+              ? mapPollCommentToUi(createdComment)
+              : comment,
+          ),
+        );
+        setTotalCommentCount(previousCount => previousCount + 1);
+      })
+      .catch(() => {
+        setComments(previousComments);
+      });
   };
 
   const handleCancelDraft = (commentId: string) => {
@@ -159,22 +321,80 @@ const Comments: React.FC<Props> = ({route, navigation}) => {
   };
 
   const handleDeleteComment = (commentId: string) => {
+    const existingComment = comments.find(comment => comment.id === commentId);
+
+    if (!existingComment) {
+      return;
+    }
+
+    if (
+      poll.pollId !== undefined &&
+      existingComment.commentId !== undefined &&
+      !existingComment.isDraft
+    ) {
+      const previousComments = comments;
+
+      setComments(previousCommentsState =>
+        previousCommentsState.filter(comment => comment.id !== commentId),
+      );
+
+      requestWithRetry(
+        () =>
+          PollService.deleteCommentById(
+            poll.pollId!,
+            existingComment.commentId!,
+            currentUsername,
+          ),
+        1,
+      )
+        .then(() => {
+          setTotalCommentCount(previousCount => Math.max(0, previousCount - 1));
+          return;
+        })
+        .catch(() => {
+          setComments(previousComments);
+        });
+      return;
+    }
+
     setComments(previousComments =>
       previousComments.filter(comment => comment.id !== commentId),
     );
   };
 
   const handleLikeComment = (commentId: string) => {
-    setComments(previousComments =>
-      previousComments.map(comment => {
-        if (comment.id !== commentId || comment.isDraft) {
+    const existingComment = comments.find(comment => comment.id === commentId);
+
+    if (
+      !existingComment ||
+      existingComment.isDraft ||
+      !existingComment.commentId
+    ) {
+      return;
+    }
+
+    const request = existingComment.likedByCurrentUser
+      ? () =>
+          PollService.clearCommentReactionById(
+            existingComment.commentId!,
+            currentUsername,
+          )
+      : () =>
+          PollService.setCommentReactionById(
+            existingComment.commentId!,
+            currentUsername,
+            'like',
+          );
+
+    const previousComments = comments;
+
+    setComments(previousCommentsState =>
+      previousCommentsState.map(comment => {
+        if (comment.id !== commentId) {
           return comment;
         }
 
-        const currentlyLiked = Boolean(comment.likedByCurrentUser);
-        const currentlyDisliked = Boolean(comment.dislikedByCurrentUser);
-
-        if (currentlyLiked) {
+        if (comment.likedByCurrentUser) {
           return {
             ...comment,
             likes: Math.max(0, comment.likes - 1),
@@ -185,7 +405,7 @@ const Comments: React.FC<Props> = ({route, navigation}) => {
         return {
           ...comment,
           likes: comment.likes + 1,
-          dislikes: currentlyDisliked
+          dislikes: comment.dislikedByCurrentUser
             ? Math.max(0, comment.dislikes - 1)
             : comment.dislikes,
           likedByCurrentUser: true,
@@ -193,19 +413,61 @@ const Comments: React.FC<Props> = ({route, navigation}) => {
         };
       }),
     );
+
+    requestWithRetry(request, 1)
+      .then(summary => {
+        setComments(currentComments =>
+          currentComments.map(comment =>
+            comment.id !== commentId
+              ? comment
+              : {
+                  ...comment,
+                  likes: summary.likes,
+                  dislikes: summary.dislikes,
+                  likedByCurrentUser: summary.viewerReaction === 'like',
+                  dislikedByCurrentUser: summary.viewerReaction === 'dislike',
+                },
+          ),
+        );
+      })
+      .catch(() => {
+        setComments(previousComments);
+      });
   };
 
   const handleDislikeComment = (commentId: string) => {
-    setComments(previousComments => {
-      const updatedComments = previousComments.map(comment => {
-        if (comment.id !== commentId || comment.isDraft) {
+    const existingComment = comments.find(comment => comment.id === commentId);
+
+    if (
+      !existingComment ||
+      existingComment.isDraft ||
+      !existingComment.commentId
+    ) {
+      return;
+    }
+
+    const request = existingComment.dislikedByCurrentUser
+      ? () =>
+          PollService.clearCommentReactionById(
+            existingComment.commentId!,
+            currentUsername,
+          )
+      : () =>
+          PollService.setCommentReactionById(
+            existingComment.commentId!,
+            currentUsername,
+            'dislike',
+          );
+
+    const previousComments = comments;
+
+    setComments(previousCommentsState => {
+      const updatedComments = previousCommentsState.map(comment => {
+        if (comment.id !== commentId) {
           return comment;
         }
 
-        const currentlyLiked = Boolean(comment.likedByCurrentUser);
-        const currentlyDisliked = Boolean(comment.dislikedByCurrentUser);
-
-        if (currentlyDisliked) {
+        if (comment.dislikedByCurrentUser) {
           return {
             ...comment,
             dislikes: Math.max(0, comment.dislikes - 1),
@@ -216,7 +478,7 @@ const Comments: React.FC<Props> = ({route, navigation}) => {
         return {
           ...comment,
           dislikes: comment.dislikes + 1,
-          likes: currentlyLiked
+          likes: comment.likedByCurrentUser
             ? Math.max(0, comment.likes - 1)
             : comment.likes,
           likedByCurrentUser: false,
@@ -228,12 +490,36 @@ const Comments: React.FC<Props> = ({route, navigation}) => {
         comment.isDraft ? true : comment.dislikes < 5,
       );
     });
+
+    requestWithRetry(request, 1)
+      .then(summary => {
+        setComments(currentComments => {
+          const updatedComments = currentComments.map(comment =>
+            comment.id !== commentId
+              ? comment
+              : {
+                  ...comment,
+                  likes: summary.likes,
+                  dislikes: summary.dislikes,
+                  likedByCurrentUser: summary.viewerReaction === 'like',
+                  dislikedByCurrentUser: summary.viewerReaction === 'dislike',
+                },
+          );
+
+          return updatedComments.filter(comment =>
+            comment.isDraft ? true : comment.dislikes < 5,
+          );
+        });
+      })
+      .catch(() => {
+        setComments(previousComments);
+      });
   };
 
   const pollHeader = (
     <View>
       {renderPoll(poll)}
-      <Text style={styles.sectionTitle}>Comments</Text>
+      <Text style={styles.sectionTitle}>{totalCommentCount} Comments</Text>
     </View>
   );
 
@@ -338,7 +624,40 @@ const Comments: React.FC<Props> = ({route, navigation}) => {
       renderItem={renderComment}
       contentContainerStyle={styles.screen}
       ListHeaderComponent={pollHeader}
+      overScrollMode="always"
       showsVerticalScrollIndicator={false}
+      onScrollBeginDrag={() => {
+        hasUserScrolledRef.current = true;
+      }}
+      onEndReached={handleLoadMore}
+      onEndReachedThreshold={0.4}
+      ListEmptyComponent={
+        !isInitialLoading ? (
+          <View style={styles.emptyStateContainer}>
+            <Text style={styles.emptyStateText}>
+              {initialLoadError ?? 'No comments yet.'}
+            </Text>
+            {initialLoadError ? (
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={() => {
+                  setIsInitialLoading(true);
+                  setHasMore(true);
+                  fetchCommentsPage({pageToLoad: 1, append: false});
+                }}>
+                <Text style={styles.retryButtonText}>Try Again</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        ) : null
+      }
+      ListFooterComponent={
+        isLoadingMore || (isInitialLoading && comments.length === 0) ? (
+          <View style={styles.footerLoader}>
+            <ActivityIndicator size="small" color={theme.colors.primary} />
+          </View>
+        ) : null
+      }
     />
   );
 };
@@ -457,6 +776,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.xs,
     paddingVertical: theme.spacing.xs,
     zIndex: 1,
+  },
+  footerLoader: {
+    paddingVertical: theme.spacing.md,
+    alignItems: 'center',
+  },
+  emptyStateContainer: {
+    paddingVertical: theme.spacing.md,
+  },
+  emptyStateText: {
+    color: theme.colors.textSecondary,
+    fontSize: theme.fontSize.base,
+  },
+  retryButton: {
+    marginTop: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.sm,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.md,
+    alignSelf: 'flex-start',
+  },
+  retryButtonText: {
+    color: theme.colors.textSecondary,
+    fontSize: theme.fontSize.sm,
+    fontWeight: '600',
   },
 });
 

@@ -1,0 +1,14 @@
+node_modules/
+backend/node_modules/
+projectBinx/node_modules/
+
+.git/
+
+projectBinx/android/.gradle/
+projectBinx/android/build/
+projectBinx/android/app/build/
+projectBinx/ios/build/
+projectBinx/ios/Pods/
+
+projectBinx/coverage/
+backend/coverage/

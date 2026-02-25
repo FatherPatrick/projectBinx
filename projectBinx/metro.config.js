@@ -8,12 +8,12 @@ const exclusionList = require('metro-config/src/defaults/exclusionList');
  * @type {import('metro-config').MetroConfig}
  */
 const config = {
-	resolver: {
-		blockList: exclusionList([
-			/.*\/android\/\.cxx\/.*/,
-			/.*\/CMakeFiles\/CMakeTmp\/.*/,
-		]),
-	},
+  resolver: {
+    blockList: exclusionList([
+      /.*\/android\/\.cxx\/.*/,
+      /.*\/CMakeFiles\/CMakeTmp\/.*/,
+    ]),
+  },
 };
 
 module.exports = mergeConfig(getDefaultConfig(__dirname), config);

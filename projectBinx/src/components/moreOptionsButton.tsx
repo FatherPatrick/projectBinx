@@ -10,6 +10,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
+import ConfirmDialog from './confirmDialog';
 import theme from '../styles/theme';
 
 interface MoreOptionsButtonProps {
@@ -28,6 +29,7 @@ export const MoreOptionsButton: React.FC<MoreOptionsButtonProps> = ({
   const {width: screenWidth, height: screenHeight} = Dimensions.get('window');
 
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isConfirmVisible, setIsConfirmVisible] = useState(false);
   const [menuPosition, setMenuPosition] = useState({top: 0, left: 0});
   const buttonRef = useRef<TouchableOpacity | null>(null);
 
@@ -36,8 +38,18 @@ export const MoreOptionsButton: React.FC<MoreOptionsButtonProps> = ({
   };
 
   const handleDelete = () => {
+    setIsConfirmVisible(false);
     closeModal();
     onDelete();
+  };
+
+  const handleDeletePress = () => {
+    closeModal();
+    setIsConfirmVisible(true);
+  };
+
+  const handleCancelDelete = () => {
+    setIsConfirmVisible(false);
   };
 
   const handleOpenModal = () => {
@@ -91,7 +103,7 @@ export const MoreOptionsButton: React.FC<MoreOptionsButtonProps> = ({
               ]}>
               <TouchableOpacity
                 style={styles.deleteButton}
-                onPress={handleDelete}>
+                onPress={handleDeletePress}>
                 <Text style={styles.deleteButtonText}>Delete {itemType}</Text>
               </TouchableOpacity>
 
@@ -104,6 +116,15 @@ export const MoreOptionsButton: React.FC<MoreOptionsButtonProps> = ({
           </TouchableWithoutFeedback>
         </TouchableOpacity>
       </Modal>
+
+      <ConfirmDialog
+        visible={isConfirmVisible}
+        title={`Delete ${itemType}?`}
+        message={`Are you sure you want to delete this ${itemType}? This action cannot be undone.`}
+        confirmLabel={`Delete ${itemType}`}
+        onConfirm={handleDelete}
+        onCancel={handleCancelDelete}
+      />
     </>
   );
 };
