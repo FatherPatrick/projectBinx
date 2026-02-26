@@ -8,7 +8,7 @@
     "dev:all": "concurrently -n backend,android -c cyan,magenta \"npm run dev:backend\" \"npm run dev:android\"",
     "start:all": "node scripts/start-all.js",
     "stack:up": "docker compose up -d db backend",
-    "stack:down": "docker compose down",
+    "stack:down": "node scripts/stack-down.js",
     "stack:logs": "docker compose logs -f db backend",
     "db:reset": "docker compose down -v && docker compose up -d --build db backend"
   },

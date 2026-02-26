@@ -24,7 +24,7 @@ Implemented foundation includes:
 - login/create-account/forgot-password screens
 - home feed that fetches and renders polls
 - poll service for CRUD + voting + result fetch
-- support for poll types: `simple`, `slider` (and `multi` in shared types)
+- support for poll types: `simple`, `slider`, and `ama`
 
 ## Tech Stack
 

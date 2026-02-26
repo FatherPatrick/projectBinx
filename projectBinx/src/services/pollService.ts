@@ -101,7 +101,12 @@ const PollService = {
 
   createCommentByPollId: async (
     id: number,
-    payload: {authorName: string; content: string; parentCommentId?: number},
+    payload: {
+      authorName: string;
+      authorAlias?: string;
+      content: string;
+      parentCommentId?: number;
+    },
   ): Promise<PollComment> => {
     try {
       const url = Polls.createCommentByPollId.replace(':id', String(id));

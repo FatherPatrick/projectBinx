@@ -12,11 +12,12 @@ import {useNavigation} from '@react-navigation/native';
 import {StackNavigationProp} from '@react-navigation/stack';
 import PollService from '../services/pollService';
 import SessionService from '../services/sessionService';
+import AnonymousNameService from '../services/anonymousNameService';
 import {PollData} from '../types/pollTypes';
 import {RootStackParamList} from '../types/navigation';
 import SimplePoll from '../components/pollTypes/simplePoll';
 import SliderPoll from '../components/pollTypes/sliderPoll';
-import MultiPoll from '../components/pollTypes/multiPoll';
+import AmaPoll from '../components/pollTypes/amaPoll';
 import ConfirmDialog from '../components/confirmDialog';
 import globalStyles from '../styles/globalStyles';
 import theme from '../styles/theme';
@@ -47,17 +48,36 @@ const Profile = () => {
   });
 
   const sessionUser = SessionService.getCurrentUser();
+  const [anonymousAlias, setAnonymousAlias] = useState(
+    sessionUser?.anonymousAlias ??
+      AnonymousNameService.getDeterministicAlias(sessionUser?.username ?? ''),
+  );
 
   const profileInfo = useMemo(
     () => ({
       name: sessionUser?.displayName ?? 'User',
-      username: `@${sessionUser?.username ?? 'current_user'}`,
+      username: anonymousAlias,
       bio: sessionUser?.phoneNumber
         ? `Phone: ${sessionUser.phoneNumber}`
+        : sessionUser?.email
+        ? `Email: ${sessionUser.email}`
         : 'Welcome to your profile.',
     }),
-    [sessionUser?.displayName, sessionUser?.phoneNumber, sessionUser?.username],
+    [
+      sessionUser?.displayName,
+      sessionUser?.phoneNumber,
+      sessionUser?.email,
+      anonymousAlias,
+    ],
   );
+
+  const handleRegenerateAlias = async () => {
+    const updatedUser = await SessionService.regenerateAnonymousAlias();
+
+    if (updatedUser?.anonymousAlias) {
+      setAnonymousAlias(updatedUser.anonymousAlias);
+    }
+  };
 
   const mergeUniquePolls = useCallback(
     (existing: PollData[], incoming: PollData[]) => {
@@ -214,6 +234,7 @@ const Profile = () => {
         <SimplePoll
           poll={poll}
           onPollDeleted={() => removePollFromHistory(poll)}
+          onPollHidden={() => removePollFromHistory(poll)}
         />
       );
     } else if (poll.type === 'slider') {
@@ -222,13 +243,15 @@ const Profile = () => {
           poll={poll}
           onSlidingStateChange={isSliding => setIsSliderInteracting(isSliding)}
           onPollDeleted={() => removePollFromHistory(poll)}
+          onPollHidden={() => removePollFromHistory(poll)}
         />
       );
-    } else if (poll.type === 'multi') {
+    } else if (poll.type === 'ama') {
       return (
-        <MultiPoll
+        <AmaPoll
           poll={poll}
           onPollDeleted={() => removePollFromHistory(poll)}
+          onPollHidden={() => removePollFromHistory(poll)}
         />
       );
     }
@@ -354,6 +377,11 @@ const Profile = () => {
               <View style={styles.profileDetails}>
                 <Text style={styles.name}>{profileInfo.name}</Text>
                 <Text style={styles.username}>{profileInfo.username}</Text>
+                <TouchableOpacity
+                  style={styles.aliasButton}
+                  onPress={handleRegenerateAlias}>
+                  <Text style={styles.aliasButtonText}>Regenerate Name</Text>
+                </TouchableOpacity>
                 <Text style={styles.bio}>{profileInfo.bio}</Text>
 
                 <TouchableOpacity
@@ -441,6 +469,15 @@ const styles = StyleSheet.create({
     marginTop: 2,
     color: theme.colors.textSecondary,
     fontSize: 14,
+  },
+  aliasButton: {
+    marginTop: theme.spacing.xs,
+    alignSelf: 'flex-start',
+  },
+  aliasButtonText: {
+    color: theme.colors.link,
+    fontSize: theme.fontSize.sm,
+    textDecorationLine: 'underline',
   },
   bio: {
     marginTop: 8,

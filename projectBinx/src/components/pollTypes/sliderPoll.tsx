@@ -23,6 +23,7 @@ interface SliderPollProps {
   commentActionMode?: 'default' | 'add';
   onAddCommentPress?: () => void;
   onPollDeleted?: () => void;
+  onPollHidden?: () => void;
 }
 
 interface SliderAggregate {
@@ -50,6 +51,7 @@ const SliderPoll: React.FC<SliderPollProps> = ({
   commentActionMode = 'default',
   onAddCommentPress,
   onPollDeleted,
+  onPollHidden,
 }) => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const aggregateKey = getPollAggregateKey(poll);
@@ -334,11 +336,12 @@ const SliderPoll: React.FC<SliderPollProps> = ({
 
   return (
     <View style={pollStyles.card}>
-      {isCurrentUserPoll && onPollDeleted ? (
+      {onPollHidden || (isCurrentUserPoll && onPollDeleted) ? (
         <MoreOptionsButton
           itemType="poll"
           containerStyle={pollStyles.moreButton}
-          onDelete={onPollDeleted}
+          onDelete={isCurrentUserPoll ? onPollDeleted : undefined}
+          onHide={onPollHidden}
         />
       ) : null}
 

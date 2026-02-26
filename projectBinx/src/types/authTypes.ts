@@ -1,6 +1,7 @@
 export interface AuthUser {
   id?: number | string;
   phoneNumber?: string;
+  email?: string;
   [key: string]: unknown;
 }
 

@@ -11,11 +11,12 @@ import SubmitVoteButton from '../submitVoteButton';
 import theme from '../../styles/theme';
 import {MoreOptionsButton} from '../moreOptionsButton';
 
-interface MultiPollProps {
+interface AmaPollProps {
   poll: PollData;
   commentActionMode?: 'default' | 'add';
   onAddCommentPress?: () => void;
   onPollDeleted?: () => void;
+  onPollHidden?: () => void;
 }
 
 interface PollReactionUiState {
@@ -25,11 +26,12 @@ interface PollReactionUiState {
   dislikedByCurrentUser: boolean;
 }
 
-const MultiPoll: React.FC<MultiPollProps> = ({
+const AmaPoll: React.FC<AmaPollProps> = ({
   poll,
   commentActionMode = 'default',
   onAddCommentPress,
   onPollDeleted,
+  onPollHidden,
 }) => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const [selected, setSelected] = useState<number | null>(null);
@@ -325,11 +327,12 @@ const MultiPoll: React.FC<MultiPollProps> = ({
 
   return (
     <View style={pollStyles.card}>
-      {isCurrentUserPoll && onPollDeleted ? (
+      {onPollHidden || (isCurrentUserPoll && onPollDeleted) ? (
         <MoreOptionsButton
           itemType="poll"
           containerStyle={pollStyles.moreButton}
-          onDelete={onPollDeleted}
+          onDelete={isCurrentUserPoll ? onPollDeleted : undefined}
+          onHide={onPollHidden}
         />
       ) : null}
 
@@ -437,4 +440,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default MultiPoll;
+export default AmaPoll;

@@ -35,6 +35,14 @@ const normalizeName = (value) =>
     .trim()
     .toLowerCase();
 
+const normalizePollType = (value) => {
+  return String(value || "")
+    .trim()
+    .toLowerCase();
+};
+
+const allowedPollTypes = new Set(["simple", "slider", "ama"]);
+
 /**
  * @swagger
  * /api/poll/paged:
@@ -64,8 +72,20 @@ const normalizeName = (value) =>
  *         description: Poll list
  */
 router.get("/poll/paged", async (req, res) => {
+  const type =
+    req.query.type === undefined
+      ? undefined
+      : normalizePollType(req.query.type);
+
+  if (type !== undefined && !allowedPollTypes.has(type)) {
+    return res.status(400).json({ message: "Invalid poll type filter." });
+  }
+
   try {
-    const polls = await getPagedPolls(req.query);
+    const polls = await getPagedPolls({
+      ...req.query,
+      ...(type ? { type } : {}),
+    });
     return res.status(200).json(polls);
   } catch (error) {
     return res.status(500).json({
@@ -87,6 +107,7 @@ router.get("/poll/paged", async (req, res) => {
  */
 router.post("/poll", pollCreateLimiter, async (req, res) => {
   const poll = req.body;
+  const pollType = normalizePollType(poll?.type);
 
   if (!poll?.title || !poll?.type || !Array.isArray(poll?.options)) {
     return res.status(400).json({
@@ -94,8 +115,16 @@ router.post("/poll", pollCreateLimiter, async (req, res) => {
     });
   }
 
+  if (!allowedPollTypes.has(pollType)) {
+    return res.status(400).json({ message: "Invalid poll type." });
+  }
+
   try {
-    const createdPoll = await createPoll(poll);
+    const createdPoll = await createPoll({
+      ...poll,
+      type: pollType,
+      allowComments: pollType === "ama" ? true : Boolean(poll.allowComments),
+    });
     return res.status(201).json(createdPoll);
   } catch (error) {
     return res.status(500).json({
@@ -125,13 +154,23 @@ router.post("/poll", pollCreateLimiter, async (req, res) => {
  */
 router.put("/poll/update/:id", pollUpdateLimiter, async (req, res) => {
   const pollId = Number(req.params.id);
+  const pollType = normalizePollType(req.body?.type);
 
   if (Number.isNaN(pollId)) {
     return res.status(400).json({ message: "Invalid poll id." });
   }
 
+  if (!allowedPollTypes.has(pollType)) {
+    return res.status(400).json({ message: "Invalid poll type." });
+  }
+
   try {
-    const updatedPoll = await updatePollById(pollId, req.body);
+    const updatedPoll = await updatePollById(pollId, {
+      ...req.body,
+      type: pollType,
+      allowComments:
+        pollType === "ama" ? true : Boolean(req.body.allowComments),
+    });
 
     if (!updatedPoll) {
       return res.status(404).json({ message: "Poll not found." });
@@ -297,6 +336,7 @@ router.get("/poll/comments/:id", async (req, res) => {
 router.post("/poll/comments/:id", commentCreateLimiter, async (req, res) => {
   const pollId = Number(req.params.id);
   const authorName = normalizeName(req.body.authorName);
+  const authorAlias = String(req.body.authorAlias || "").trim();
   const content = String(req.body.content || "").trim();
   const parentCommentId =
     req.body.parentCommentId === undefined || req.body.parentCommentId === null
@@ -321,6 +361,7 @@ router.post("/poll/comments/:id", commentCreateLimiter, async (req, res) => {
     const created = await createComment({
       pollId,
       authorName,
+      authorAlias: authorAlias || undefined,
       content,
       parentCommentId,
     });
@@ -332,6 +373,13 @@ router.post("/poll/comments/:id", commentCreateLimiter, async (req, res) => {
 
       if (created.reason === "parent-comment-not-found") {
         return res.status(404).json({ message: "Parent comment not found." });
+      }
+
+      if (created.reason === "ama-author-reply-required") {
+        return res.status(403).json({
+          message:
+            "AMA replies are locked until the poll author responds first.",
+        });
       }
 
       return res.status(400).json({ message: "Invalid comment payload." });

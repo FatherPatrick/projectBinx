@@ -16,6 +16,7 @@ interface SimplePollProps {
   commentActionMode?: 'default' | 'add';
   onAddCommentPress?: () => void;
   onPollDeleted?: () => void;
+  onPollHidden?: () => void;
 }
 
 interface PollReactionUiState {
@@ -30,6 +31,7 @@ const SimplePoll: React.FC<SimplePollProps> = ({
   commentActionMode = 'default',
   onAddCommentPress,
   onPollDeleted,
+  onPollHidden,
 }) => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const [selected, setSelected] = useState<number | null>(null);
@@ -323,16 +325,7 @@ const SimplePoll: React.FC<SimplePollProps> = ({
     }
   };
 
-  // Determine if it's a yes/no or up/down poll based on option text
-  const isYesNo =
-    poll.options.length === 2 &&
-    poll.options.some(opt => opt.optionText.toLowerCase().includes('yes')) &&
-    poll.options.some(opt => opt.optionText.toLowerCase().includes('no'));
-
-  const isUpDown =
-    poll.options.length === 2 &&
-    poll.options.some(opt => opt.optionText.toLowerCase().includes('up')) &&
-    poll.options.some(opt => opt.optionText.toLowerCase().includes('down'));
+  const isTwoOptionSimple = poll.options.length === 2;
 
   const renderBinaryOptions = () => (
     <View style={styles.binaryOptionsContainer}>
@@ -411,11 +404,12 @@ const SimplePoll: React.FC<SimplePollProps> = ({
 
   return (
     <View style={pollStyles.card}>
-      {isCurrentUserPoll && onPollDeleted ? (
+      {onPollHidden || (isCurrentUserPoll && onPollDeleted) ? (
         <MoreOptionsButton
           itemType="poll"
           containerStyle={pollStyles.moreButton}
-          onDelete={onPollDeleted}
+          onDelete={isCurrentUserPoll ? onPollDeleted : undefined}
+          onHide={onPollHidden}
         />
       ) : null}
 
@@ -425,7 +419,7 @@ const SimplePoll: React.FC<SimplePollProps> = ({
       ) : null}
       {voteError ? <Text style={pollStyles.errorText}>{voteError}</Text> : null}
 
-      {isYesNo || isUpDown ? renderBinaryOptions() : renderListOptions()}
+      {isTwoOptionSimple ? renderBinaryOptions() : renderListOptions()}
 
       {selected !== null ? (
         <SubmitVoteButton

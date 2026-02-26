@@ -1,5 +1,6 @@
 const { spawn } = require("node:child_process");
 const fs = require("node:fs");
+const http = require("node:http");
 const net = require("node:net");
 const path = require("node:path");
 const readline = require("node:readline");
@@ -110,6 +111,44 @@ const isPortInUse = (port) =>
       resolve(false);
     });
   });
+
+const isMetroRunning = () =>
+  new Promise((resolve) => {
+    const request = http.get("http://127.0.0.1:8081/status", (response) => {
+      let body = "";
+
+      response.on("data", (chunk) => {
+        body += chunk.toString();
+      });
+
+      response.on("end", () => {
+        resolve(
+          response.statusCode === 200 && body.includes("packager-status:running")
+        );
+      });
+    });
+
+    request.on("error", () => resolve(false));
+    request.setTimeout(1500, () => {
+      request.destroy();
+      resolve(false);
+    });
+  });
+
+const waitForMetroReady = async ({ getExitCode }) => {
+  for (;;) {
+    if (await isMetroRunning()) {
+      return;
+    }
+
+    const exitCode = getExitCode();
+    if (exitCode !== null && exitCode !== undefined && exitCode !== 0) {
+      throw new Error(`Metro exited with code ${exitCode}`);
+    }
+
+    await sleep(1000);
+  }
+};
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -350,17 +389,38 @@ const main = async () => {
     );
 
     let metro = null;
-    const metroAlreadyRunning = await isPortInUse(8081);
+    let metroExitCode = null;
+    const metroAlreadyRunning = await isMetroRunning();
     if (metroAlreadyRunning) {
       process.stdout.write(
         "[metro] Existing Metro detected on port 8081. Reusing it.\n"
       );
     } else {
+      const metroPortBusy = await isPortInUse(8081);
+      if (metroPortBusy) {
+        throw new Error(
+          "Port 8081 is in use by a non-Metro process. Stop that process before running start:all."
+        );
+      }
+
       metro = spawnLongRunning(
         "npm",
         ["--prefix", "projectBinx", "run", "start"],
         "metro"
       );
+
+      metro.on("close", (code) => {
+        metroExitCode = code;
+        if (code && code !== 0) {
+          killProcess(backendLogs);
+          process.exit(code);
+        }
+      });
+
+      await waitForMetroReady({
+        getExitCode: () => metroExitCode,
+      });
+      process.stdout.write("[metro] Metro is ready on port 8081.\n");
     }
 
     const androidProjectDir = path.join(
@@ -415,15 +475,6 @@ const main = async () => {
 
     process.on("SIGINT", shutdown);
     process.on("SIGTERM", shutdown);
-
-    if (metro) {
-      metro.on("close", (code) => {
-        if (code && code !== 0) {
-          killProcess(backendLogs);
-          process.exit(code);
-        }
-      });
-    }
 
     backendLogs.on("close", (code) => {
       if (code && code !== 0) {

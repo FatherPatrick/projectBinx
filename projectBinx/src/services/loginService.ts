@@ -8,7 +8,8 @@ import {
 } from '../types/authTypes';
 
 export interface Credentials {
-  phoneNumber: string;
+  phoneNumber?: string;
+  email?: string;
   password?: string;
   deviceId: string;
 }

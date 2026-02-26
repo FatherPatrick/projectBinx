@@ -1,10 +1,13 @@
 import {AuthUser} from '../types/authTypes';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import AnonymousNameService from './anonymousNameService';
 
 export interface SessionUser {
   id?: number | string;
   displayName: string;
   phoneNumber: string;
+  email: string;
+  anonymousAlias: string;
   username: string;
 }
 
@@ -28,11 +31,16 @@ const SessionService = {
 
     const phoneNumber =
       typeof user?.phoneNumber === 'string' ? user.phoneNumber : '';
+    const email = typeof user?.email === 'string' ? user.email : '';
 
     currentUser = {
       id: user?.id,
       displayName,
       phoneNumber,
+      email,
+      anonymousAlias:
+        currentUser?.anonymousAlias ??
+        AnonymousNameService.generateRandomAlias(),
       username: toUsername(displayName),
     };
 
@@ -58,14 +66,29 @@ const SessionService = {
         return null;
       }
 
-      const parsedSession = JSON.parse(storedSession) as SessionUser;
+      const parsedSession = JSON.parse(storedSession) as Partial<SessionUser>;
 
       if (!parsedSession?.displayName || !parsedSession?.username) {
         await AsyncStorage.removeItem(SESSION_STORAGE_KEY);
         return null;
       }
 
-      currentUser = parsedSession;
+      currentUser = {
+        id: parsedSession.id,
+        displayName: parsedSession.displayName,
+        phoneNumber:
+          typeof parsedSession.phoneNumber === 'string'
+            ? parsedSession.phoneNumber
+            : '',
+        email:
+          typeof parsedSession.email === 'string' ? parsedSession.email : '',
+        anonymousAlias:
+          typeof parsedSession.anonymousAlias === 'string' &&
+          parsedSession.anonymousAlias.trim().length > 0
+            ? parsedSession.anonymousAlias
+            : AnonymousNameService.generateRandomAlias(),
+        username: parsedSession.username,
+      };
       return currentUser;
     } catch (error) {
       return null;
@@ -73,6 +96,26 @@ const SessionService = {
   },
 
   getCurrentUser: (): SessionUser | null => currentUser,
+
+  regenerateAnonymousAlias: async (): Promise<SessionUser | null> => {
+    if (!currentUser) {
+      return null;
+    }
+
+    currentUser = {
+      ...currentUser,
+      anonymousAlias: AnonymousNameService.generateRandomAlias(),
+    };
+
+    try {
+      await AsyncStorage.setItem(
+        SESSION_STORAGE_KEY,
+        JSON.stringify(currentUser),
+      );
+    } catch (error) {}
+
+    return currentUser;
+  },
 
   clearCurrentUser: async () => {
     currentUser = null;

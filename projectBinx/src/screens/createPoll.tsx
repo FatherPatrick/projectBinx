@@ -26,7 +26,7 @@ interface Props {
 const MAX_OPTIONS = 10;
 const FIXED_SLIDER_OPTIONS = 5;
 
-const pollTypeOptions: PollType[] = ['simple', 'slider', 'multi'];
+const pollTypeOptions: PollType[] = ['simple', 'slider', 'ama'];
 const simplePollPresets = ['yes-no', 'up-down'] as const;
 type SimplePollPreset = (typeof simplePollPresets)[number];
 
@@ -39,13 +39,14 @@ const defaultOptionsByType: Record<PollType, string[]> = {
     'Agree',
     'Strongly Agree',
   ],
-  multi: ['', ''],
+  ama: [],
 };
 
 const pollTypeHelperText: Record<PollType, string> = {
-  simple: 'Single-choice poll. People can select one option.',
-  slider: 'Rating-style poll with 5 ordered options.',
-  multi: 'Multiple-choice poll. People can select more than one option.',
+  simple:
+    'Single-choice poll. Starts with 2 options and can expand with more choices.',
+  slider: 'Rating-style poll.',
+  ama: 'Ask-me-anything style poll. Comments are required and replies unlock after author response.',
 };
 
 const CreatePoll: React.FC<Props> = ({navigation}) => {
@@ -61,11 +62,18 @@ const CreatePoll: React.FC<Props> = ({navigation}) => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const options = optionsByType[pollType];
-  const minOptions = pollType === 'slider' ? FIXED_SLIDER_OPTIONS : 2;
-  const maxOptions = pollType === 'slider' ? FIXED_SLIDER_OPTIONS : MAX_OPTIONS;
-  const canEditOptions = pollType === 'multi';
+  const minOptions =
+    pollType === 'slider' ? FIXED_SLIDER_OPTIONS : pollType === 'ama' ? 0 : 2;
+  const maxOptions =
+    pollType === 'slider'
+      ? FIXED_SLIDER_OPTIONS
+      : pollType === 'ama'
+      ? 0
+      : MAX_OPTIONS;
+  const canEditOptions = pollType === 'simple';
   const isSliderPoll = pollType === 'slider';
   const isSimplePoll = pollType === 'simple';
+  const isAmaPoll = pollType === 'ama';
 
   const selectedSliderIndex = 2;
   const sliderThumbLeftPercent =
@@ -76,7 +84,7 @@ const CreatePoll: React.FC<Props> = ({navigation}) => {
       return `Level ${index + 1}`;
     }
 
-    if (pollType === 'multi') {
+    if (pollType === 'ama') {
       return `Choice ${index + 1}`;
     }
 
@@ -143,6 +151,10 @@ const CreatePoll: React.FC<Props> = ({navigation}) => {
       }));
     }
 
+    if (selectedType === 'ama') {
+      setAllowComments(true);
+    }
+
     setErrorMessage(null);
   };
 
@@ -155,6 +167,38 @@ const CreatePoll: React.FC<Props> = ({navigation}) => {
     }));
     setErrorMessage(null);
   };
+
+  const resetForm = () => {
+    setTitle('');
+    setDescription('');
+    setPollType('simple');
+    setAllowComments(true);
+    setSimplePreset('yes-no');
+    setOptionsByType(defaultOptionsByType);
+    setHasInteracted(false);
+    setErrorMessage(null);
+  };
+
+  const renderListPreview = () => (
+    <View style={pollStyles.card}>
+      <Text style={pollStyles.title}>{previewTitle}</Text>
+      {previewDescription ? (
+        <Text style={pollStyles.description}>{previewDescription}</Text>
+      ) : null}
+
+      <View>
+        {previewOptions.map((option, index) => (
+          <View key={`${option}-${index}`} style={pollStyles.optionButtonBase}>
+            <View
+              style={[pollStyles.radioOuter, pollStyles.radioOuterUnselected]}>
+              <View style={styles.amaPreviewRadioInner} />
+            </View>
+            <Text style={pollStyles.optionText}>{option}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
 
   const renderPostPreview = () => {
     if (isSliderPoll) {
@@ -185,7 +229,18 @@ const CreatePoll: React.FC<Props> = ({navigation}) => {
       );
     }
 
-    if (isSimplePoll) {
+    if (isAmaPoll) {
+      return (
+        <View style={pollStyles.card}>
+          <Text style={pollStyles.title}>{previewTitle}</Text>
+          {previewDescription ? (
+            <Text style={pollStyles.description}>{previewDescription}</Text>
+          ) : null}
+        </View>
+      );
+    }
+
+    if (isSimplePoll && previewOptions.length === 2) {
       return (
         <View style={pollStyles.card}>
           <Text style={pollStyles.title}>{previewTitle}</Text>
@@ -194,8 +249,10 @@ const CreatePoll: React.FC<Props> = ({navigation}) => {
           ) : null}
 
           <View style={styles.simplePreviewRow}>
-            {previewOptions.slice(0, 2).map(option => (
-              <View key={option} style={styles.simplePreviewButton}>
+            {previewOptions.slice(0, 2).map((option, index) => (
+              <View
+                key={`${option}-${index}`}
+                style={styles.simplePreviewButton}>
                 <Text style={styles.simplePreviewButtonText}>{option}</Text>
               </View>
             ))}
@@ -204,31 +261,7 @@ const CreatePoll: React.FC<Props> = ({navigation}) => {
       );
     }
 
-    return (
-      <View style={pollStyles.card}>
-        <Text style={pollStyles.title}>{previewTitle}</Text>
-        {previewDescription ? (
-          <Text style={pollStyles.description}>{previewDescription}</Text>
-        ) : null}
-
-        <View>
-          {previewOptions.map((option, index) => (
-            <View
-              key={`${option}-${index}`}
-              style={pollStyles.optionButtonBase}>
-              <View
-                style={[
-                  pollStyles.radioOuter,
-                  pollStyles.radioOuterUnselected,
-                ]}>
-                <View style={styles.multiPreviewRadioInner} />
-              </View>
-              <Text style={pollStyles.optionText}>{option}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-    );
+    return renderListPreview();
   };
 
   const handleCreatePoll = async () => {
@@ -283,7 +316,7 @@ const CreatePoll: React.FC<Props> = ({navigation}) => {
       title: trimmedTitle,
       description: trimmedDescription || undefined,
       type: pollType,
-      allowComments,
+      allowComments: isAmaPoll ? true : allowComments,
       options: cleanedOptions.map((optionText, index) => ({
         optionTypeId: index + 1,
         optionText,
@@ -294,6 +327,7 @@ const CreatePoll: React.FC<Props> = ({navigation}) => {
       setErrorMessage(null);
       setIsSubmitting(true);
       const createdPoll = await PollService.postPoll(newPoll);
+      resetForm();
       Alert.alert('Success', `${pollType} poll created.`);
       navigation.navigate('Home', {createdPoll});
     } catch (error) {
@@ -387,8 +421,12 @@ const CreatePoll: React.FC<Props> = ({navigation}) => {
         <View style={styles.toggleRow}>
           <Text style={styles.toggleLabel}>Allow comments</Text>
           <Switch
-            value={allowComments}
+            value={isAmaPoll ? true : allowComments}
+            disabled={isAmaPoll}
             onValueChange={value => {
+              if (isAmaPoll) {
+                return;
+              }
               setHasInteracted(true);
               setAllowComments(value);
             }}
@@ -437,7 +475,7 @@ const CreatePoll: React.FC<Props> = ({navigation}) => {
           </>
         ) : null}
 
-        {pollType === 'multi' ? (
+        {canEditOptions ? (
           <>
             <Text style={globalStyles.sectionTitle}>
               Options ({options.length}/{maxOptions})
@@ -654,7 +692,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontWeight: '600',
   },
-  multiPreviewRadioInner: {
+  amaPreviewRadioInner: {
     width: 8,
     height: 8,
     borderRadius: 4,

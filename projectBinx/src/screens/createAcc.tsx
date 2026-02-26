@@ -12,6 +12,7 @@ interface Props {
 
 const CreateAccount: React.FC<Props> = ({navigation}) => {
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [deviceId, setDeviceId] = useState('');
@@ -30,8 +31,17 @@ const CreateAccount: React.FC<Props> = ({navigation}) => {
 
   const handleCreateAccount = async () => {
     const trimmedPhoneNumber = phoneNumber.trim();
-    if (!trimmedPhoneNumber) {
-      setErrorMessage('Phone number is required.');
+    const trimmedEmail = email.trim().toLowerCase();
+    const hasPhone = trimmedPhoneNumber.length > 0;
+    const hasEmail = trimmedEmail.length > 0;
+
+    if ((hasPhone && hasEmail) || (!hasPhone && !hasEmail)) {
+      setErrorMessage('Provide either phone number or email, but not both.');
+      return;
+    }
+
+    if (hasEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setErrorMessage('Please enter a valid email address.');
       return;
     }
 
@@ -54,7 +64,8 @@ const CreateAccount: React.FC<Props> = ({navigation}) => {
     setSuccessMessage(null);
 
     const credentials: Credentials = {
-      phoneNumber: trimmedPhoneNumber,
+      ...(hasPhone ? {phoneNumber: trimmedPhoneNumber} : {}),
+      ...(hasEmail ? {email: trimmedEmail} : {}),
       password,
       deviceId,
     };
@@ -81,6 +92,20 @@ const CreateAccount: React.FC<Props> = ({navigation}) => {
         value={phoneNumber}
         onChangeText={text => {
           setPhoneNumber(text);
+          if (errorMessage) {
+            setErrorMessage(null);
+          }
+        }}
+      />
+      <Text style={styles.orText}>OR</Text>
+      <TextInput
+        style={[globalStyles.input, styles.input]}
+        placeholder="Email"
+        keyboardType="email-address"
+        autoCapitalize="none"
+        value={email}
+        onChangeText={text => {
+          setEmail(text);
           if (errorMessage) {
             setErrorMessage(null);
           }
@@ -128,6 +153,11 @@ const CreateAccount: React.FC<Props> = ({navigation}) => {
 const styles = StyleSheet.create({
   input: {
     height: 40,
+  },
+  orText: {
+    marginBottom: 8,
+    color: '#6b7280',
+    fontWeight: '600',
   },
 });
 

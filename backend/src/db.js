@@ -22,11 +22,44 @@ const ensureAuthSchema = async () => {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
-      phone_number VARCHAR(30) UNIQUE NOT NULL,
+      phone_number VARCHAR(30),
+      email VARCHAR(255),
       password_hash TEXT NOT NULL,
       display_name VARCHAR(120) NOT NULL,
       device_id TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255);`);
+  await pool.query(`ALTER TABLE users ALTER COLUMN phone_number DROP NOT NULL;`);
+  await pool.query(
+    `UPDATE users SET phone_number = NULL WHERE phone_number IS NOT NULL AND TRIM(phone_number) = '';`
+  );
+  await pool.query(
+    `UPDATE users SET email = NULL WHERE email IS NOT NULL AND TRIM(email) = '';`
+  );
+  await pool.query(
+    `UPDATE users SET email = LOWER(TRIM(email)) WHERE email IS NOT NULL;`
+  );
+
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS ux_users_email_lower
+    ON users(LOWER(email))
+    WHERE email IS NOT NULL AND TRIM(email) <> '';
+  `);
+
+  await pool.query(
+    `ALTER TABLE users DROP CONSTRAINT IF EXISTS users_contact_one_required;`
+  );
+  await pool.query(`
+    ALTER TABLE users
+    ADD CONSTRAINT users_contact_one_required
+    CHECK (
+      (
+        CASE WHEN phone_number IS NOT NULL AND TRIM(phone_number) <> '' THEN 1 ELSE 0 END +
+        CASE WHEN email IS NOT NULL AND TRIM(email) <> '' THEN 1 ELSE 0 END
+      ) = 1
     );
   `);
 
@@ -134,6 +167,25 @@ const ensurePollSchema = async () => {
   await pool.query(
     `UPDATE polls SET poll_type = COALESCE(poll_type, type, 'simple') WHERE poll_type IS NULL;`
   );
+  await pool.query(
+    `UPDATE polls
+     SET poll_type = CASE
+       WHEN LOWER(TRIM(COALESCE(poll_type, ''))) IN ('simple', 'slider', 'ama')
+         THEN LOWER(TRIM(poll_type))
+       ELSE 'ama'
+     END;`
+  );
+  await pool.query(
+    `ALTER TABLE polls DROP CONSTRAINT IF EXISTS polls_poll_type_allowed;`
+  );
+  await pool.query(
+    `ALTER TABLE polls
+     ADD CONSTRAINT polls_poll_type_allowed
+     CHECK (poll_type IN ('simple', 'slider', 'ama'));`
+  );
+  await pool.query(
+    `UPDATE polls SET allow_comments = true WHERE poll_type = 'ama';`
+  );
 
   await pool.query(
     `ALTER TABLE poll_options ADD COLUMN IF NOT EXISTS option_type_id INTEGER;`
@@ -158,12 +210,17 @@ const ensurePollSchema = async () => {
       id SERIAL PRIMARY KEY,
       poll_id INTEGER NOT NULL REFERENCES polls(id) ON DELETE CASCADE,
       author_name VARCHAR(120) NOT NULL,
+      author_alias VARCHAR(120),
       content TEXT NOT NULL,
       parent_comment_id INTEGER REFERENCES poll_comments(id) ON DELETE CASCADE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
   `);
+
+  await pool.query(
+    `ALTER TABLE poll_comments ADD COLUMN IF NOT EXISTS author_alias VARCHAR(120);`
+  );
 
   await pool.query(`
     CREATE INDEX IF NOT EXISTS ix_poll_comments_poll_id_created_at
@@ -322,7 +379,7 @@ const defaultPolls = [
     user: "qa_user",
     title: "Unsupported poll type coverage",
     description: "This validates behavior for poll types not rendered yet.",
-    type: "multi",
+    type: "ama",
     allowComments: true,
     options: ["Alpha", "Beta", "Gamma"],
   },

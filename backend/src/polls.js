@@ -8,6 +8,10 @@ const mapPollRow = (pollRow) => ({
   type: pollRow.poll_type,
   allowComments: pollRow.allow_comments,
   commentCount: Number(pollRow.comment_count ?? 0),
+  likes: Number(pollRow.likes ?? 0),
+  dislikes: Number(pollRow.dislikes ?? 0),
+  createdAt: pollRow.created_at,
+  updatedAt: pollRow.updated_at,
   options: [],
 });
 
@@ -77,13 +81,24 @@ const getPagedPolls = async ({ page = 1, pageSize = 20, user, type }) => {
             p.description,
             p.poll_type,
             p.allow_comments,
-            COALESCE(comment_counts.comment_count, 0)::int AS comment_count
+            p.created_at,
+            p.updated_at,
+            COALESCE(comment_counts.comment_count, 0)::int AS comment_count,
+            COALESCE(reaction_counts.likes, 0)::int AS likes,
+            COALESCE(reaction_counts.dislikes, 0)::int AS dislikes
      FROM polls p
      LEFT JOIN (
        SELECT poll_id, COUNT(*)::int AS comment_count
        FROM poll_comments
        GROUP BY poll_id
      ) AS comment_counts ON comment_counts.poll_id = p.id
+     LEFT JOIN (
+       SELECT poll_id,
+              SUM(CASE WHEN reaction = 1 THEN 1 ELSE 0 END)::int AS likes,
+              SUM(CASE WHEN reaction = -1 THEN 1 ELSE 0 END)::int AS dislikes
+       FROM poll_reactions
+       GROUP BY poll_id
+     ) AS reaction_counts ON reaction_counts.poll_id = p.id
      ${whereSql}
      ORDER BY p.id DESC
      LIMIT $${limitIndex}
@@ -97,6 +112,7 @@ const getPagedPolls = async ({ page = 1, pageSize = 20, user, type }) => {
 
 const createPoll = async (poll) => {
   const client = await pool.connect();
+  const allowComments = poll.type === "ama" ? true : Boolean(poll.allowComments);
 
   try {
     await client.query("BEGIN");
@@ -104,13 +120,13 @@ const createPoll = async (poll) => {
     const pollInsert = await client.query(
       `INSERT INTO polls (created_by, title, description, poll_type, allow_comments)
        VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, created_by, title, description, poll_type, allow_comments`,
+       RETURNING id, created_by, title, description, poll_type, allow_comments, created_at, updated_at`,
       [
         poll.user,
         poll.title,
         poll.description ?? null,
         poll.type,
-        Boolean(poll.allowComments),
+        allowComments,
       ]
     );
 
@@ -140,6 +156,7 @@ const createPoll = async (poll) => {
 
 const updatePollById = async (pollId, poll) => {
   const client = await pool.connect();
+  const allowComments = poll.type === "ama" ? true : Boolean(poll.allowComments);
 
   try {
     await client.query("BEGIN");
@@ -153,13 +170,13 @@ const updatePollById = async (pollId, poll) => {
            created_by = $6,
            updated_at = NOW()
        WHERE id = $1
-       RETURNING id, created_by, title, description, poll_type, allow_comments`,
+       RETURNING id, created_by, title, description, poll_type, allow_comments, created_at, updated_at`,
       [
         pollId,
         poll.title,
         poll.description ?? null,
         poll.type,
-        Boolean(poll.allowComments),
+        allowComments,
         poll.user,
       ]
     );
@@ -209,13 +226,24 @@ const findPollById = async (pollId) => {
             p.description,
             p.poll_type,
             p.allow_comments,
-            COALESCE(comment_counts.comment_count, 0)::int AS comment_count
+            p.created_at,
+            p.updated_at,
+            COALESCE(comment_counts.comment_count, 0)::int AS comment_count,
+            COALESCE(reaction_counts.likes, 0)::int AS likes,
+            COALESCE(reaction_counts.dislikes, 0)::int AS dislikes
      FROM polls p
      LEFT JOIN (
        SELECT poll_id, COUNT(*)::int AS comment_count
        FROM poll_comments
        GROUP BY poll_id
      ) AS comment_counts ON comment_counts.poll_id = p.id
+     LEFT JOIN (
+       SELECT poll_id,
+              SUM(CASE WHEN reaction = 1 THEN 1 ELSE 0 END)::int AS likes,
+              SUM(CASE WHEN reaction = -1 THEN 1 ELSE 0 END)::int AS dislikes
+       FROM poll_reactions
+       GROUP BY poll_id
+     ) AS reaction_counts ON reaction_counts.poll_id = p.id
      WHERE p.id = $1`,
     [pollId]
   );

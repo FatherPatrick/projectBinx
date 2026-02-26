@@ -12,12 +12,13 @@ const createTokenPair = () => ({
 const toPublicUser = (dbUser) => ({
   id: dbUser.id,
   phoneNumber: dbUser.phone_number,
+  email: dbUser.email,
   displayName: dbUser.display_name,
 });
 
 const findUserByPhone = async (phoneNumber) => {
   const result = await pool.query(
-    `SELECT id, phone_number, password_hash, display_name
+    `SELECT id, phone_number, email, password_hash, display_name
      FROM users
      WHERE phone_number = $1`,
     [phoneNumber]
@@ -26,15 +27,31 @@ const findUserByPhone = async (phoneNumber) => {
   return result.rows[0] ?? null;
 };
 
-const createUser = async ({ phoneNumber, password, deviceId }) => {
-  const displayName = `User${phoneNumber.slice(-4)}`;
+const findUserByEmail = async (email) => {
+  const result = await pool.query(
+    `SELECT id, phone_number, email, password_hash, display_name
+     FROM users
+     WHERE LOWER(email) = LOWER($1)`,
+    [email]
+  );
+
+  return result.rows[0] ?? null;
+};
+
+const createUser = async ({ phoneNumber, email, password, deviceId }) => {
+  const normalizedPhone = String(phoneNumber || "").trim() || null;
+  const normalizedEmail = String(email || "")
+    .trim()
+    .toLowerCase() || null;
+  const identitySeed = normalizedPhone ?? normalizedEmail ?? "user";
+  const displayName = `User${identitySeed.slice(-4)}`;
   const passwordHash = hashPassword(password);
 
   const insertResult = await pool.query(
-    `INSERT INTO users (phone_number, password_hash, display_name, device_id)
-     VALUES ($1, $2, $3, $4)
-     RETURNING id, phone_number, display_name`,
-    [phoneNumber, passwordHash, displayName, deviceId]
+    `INSERT INTO users (phone_number, email, password_hash, display_name, device_id)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id, phone_number, email, display_name`,
+    [normalizedPhone, normalizedEmail, passwordHash, displayName, deviceId]
   );
 
   return insertResult.rows[0];
@@ -59,6 +76,7 @@ const createSession = async ({ userId, deviceId }) => {
 
 module.exports = {
   findUserByPhone,
+  findUserByEmail,
   createUser,
   validateUserPassword,
   createSession,

@@ -16,7 +16,7 @@ Moderation target behavior: any poll that reaches **-5 score** is auto-deleted.
 - Authentication flow screens (`Login`, `CreateAccount`, `ForgotPassword`)
 - Home poll feed with dynamic poll rendering
 - Poll API service (`getPagedPolls`, `postPoll`, `voteById`, etc.)
-- Poll type foundations: `simple`, `slider`, and typed support for `multi`
+- Poll type foundations: `simple`, `slider`, and `ama`
 
 ## Run the App
 
@@ -110,9 +110,5 @@ Backend URLs:
 
 - allow user to select 'profile picture' which will be from a set selection of images.
   - user can change background color
-- Add more poll options
-- allow filtering of polls/comments by newest, oldest, most liked, most disliked
-- allow hiding of polls/comments
 - somehow make this location specific
-- allow user profiles to be created with phone number OR email
 - define some way to deploy this reliably on vercel

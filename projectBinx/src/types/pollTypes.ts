@@ -1,4 +1,4 @@
-export type PollType = 'simple' | 'multi' | 'slider';
+export type PollType = 'simple' | 'slider' | 'ama';
 
 export interface PollQueryParams {
   page?: number;
@@ -22,6 +22,10 @@ export interface PollData {
   type: PollType;
   allowComments: boolean;
   commentCount?: number;
+  likes?: number;
+  dislikes?: number;
+  createdAt?: string;
+  updatedAt?: string;
   options: PollOption[];
 }
 
@@ -62,6 +66,7 @@ export interface PollComment {
   pollId: number;
   parentCommentId: number | null;
   authorName: string;
+  authorAlias?: string;
   content: string;
   likes: number;
   dislikes: number;

@@ -17,6 +17,7 @@ const mapCommentRow = (row) => ({
   pollId: row.poll_id,
   parentCommentId: row.parent_comment_id,
   authorName: row.author_name,
+  authorAlias: row.author_alias,
   content: row.content,
   likes: row.likes,
   dislikes: row.dislikes,
@@ -35,6 +36,23 @@ const ensurePollExists = async (pollId) => {
   return poll.rowCount > 0;
 };
 
+const getPollContext = async (pollId) => {
+  const poll = await pool.query(
+    "SELECT id, created_by, poll_type FROM polls WHERE id = $1",
+    [pollId]
+  );
+
+  if (poll.rowCount === 0) {
+    return null;
+  }
+
+  return {
+    pollId: poll.rows[0].id,
+    createdBy: String(poll.rows[0].created_by || "").toLowerCase(),
+    type: String(poll.rows[0].poll_type || "").toLowerCase(),
+  };
+};
+
 const ensureCommentExists = async (commentId) => {
   const comment = await pool.query(
     "SELECT id FROM poll_comments WHERE id = $1",
@@ -43,13 +61,44 @@ const ensureCommentExists = async (commentId) => {
   return comment.rowCount > 0;
 };
 
+const resolveThreadRootCommentId = async ({ pollId, commentId }) => {
+  let currentCommentId = commentId;
+
+  for (let depth = 0; depth < 50; depth += 1) {
+    const commentResult = await pool.query(
+      `SELECT id, parent_comment_id
+       FROM poll_comments
+       WHERE id = $1 AND poll_id = $2`,
+      [currentCommentId, pollId]
+    );
+
+    if (commentResult.rowCount === 0) {
+      return null;
+    }
+
+    const row = commentResult.rows[0];
+    const parentCommentId = row.parent_comment_id;
+
+    if (parentCommentId === null) {
+      return row.id;
+    }
+
+    currentCommentId = parentCommentId;
+  }
+
+  return currentCommentId;
+};
+
 const createComment = async ({
   pollId,
   authorName,
+  authorAlias,
   content,
   parentCommentId,
 }) => {
-  if (!(await ensurePollExists(pollId))) {
+  const pollContext = await getPollContext(pollId);
+
+  if (!pollContext) {
     return { success: false, reason: "poll-not-found" };
   }
 
@@ -62,13 +111,41 @@ const createComment = async ({
     if (parentComment.rowCount === 0) {
       return { success: false, reason: "parent-comment-not-found" };
     }
+
+    if (
+      pollContext.type === "ama" &&
+      String(authorName || "").toLowerCase() !== pollContext.createdBy
+    ) {
+      const rootCommentId = await resolveThreadRootCommentId({
+        pollId,
+        commentId: parentCommentId,
+      });
+
+      if (!rootCommentId) {
+        return { success: false, reason: "parent-comment-not-found" };
+      }
+
+      const authorReply = await pool.query(
+        `SELECT id
+         FROM poll_comments
+         WHERE poll_id = $1
+           AND parent_comment_id = $2
+           AND LOWER(author_name) = $3
+         LIMIT 1`,
+        [pollId, rootCommentId, pollContext.createdBy]
+      );
+
+      if (authorReply.rowCount === 0) {
+        return { success: false, reason: "ama-author-reply-required" };
+      }
+    }
   }
 
   const createdComment = await pool.query(
-    `INSERT INTO poll_comments (poll_id, author_name, content, parent_comment_id)
-     VALUES ($1, $2, $3, $4)
-     RETURNING id, poll_id, parent_comment_id, author_name, content, created_at, updated_at`,
-    [pollId, authorName, content, parentCommentId ?? null]
+    `INSERT INTO poll_comments (poll_id, author_name, author_alias, content, parent_comment_id)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id, poll_id, parent_comment_id, author_name, author_alias, content, created_at, updated_at`,
+    [pollId, authorName, authorAlias ?? null, content, parentCommentId ?? null]
   );
 
   const row = createdComment.rows[0];
@@ -79,6 +156,7 @@ const createComment = async ({
       pollId: row.poll_id,
       parentCommentId: row.parent_comment_id,
       authorName: row.author_name,
+      authorAlias: row.author_alias,
       content: row.content,
       likes: 0,
       dislikes: 0,
@@ -104,6 +182,7 @@ const getCommentsByPollId = async ({
             c.poll_id,
             c.parent_comment_id,
             c.author_name,
+            c.author_alias,
             c.content,
             c.created_at,
             c.updated_at,

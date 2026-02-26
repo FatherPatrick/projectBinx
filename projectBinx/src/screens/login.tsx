@@ -19,7 +19,7 @@ interface Props {
 }
 
 const LoginScreen: React.FC<Props> = ({navigation}) => {
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [deviceId, setDeviceId] = useState('');
   const [loading, setLoading] = useState(false);
@@ -36,9 +36,10 @@ const LoginScreen: React.FC<Props> = ({navigation}) => {
   }, []);
 
   const handleLogin = async () => {
-    const trimmedPhoneNumber = phoneNumber.trim();
-    if (!trimmedPhoneNumber) {
-      setErrorMessage('Phone number is required.');
+    const trimmedIdentifier = identifier.trim();
+
+    if (!trimmedIdentifier) {
+      setErrorMessage('Phone number or email is required.');
       return;
     }
 
@@ -53,8 +54,11 @@ const LoginScreen: React.FC<Props> = ({navigation}) => {
     }
 
     setErrorMessage(null);
+    const looksLikeEmail = trimmedIdentifier.includes('@');
     const credentials: Credentials = {
-      phoneNumber: trimmedPhoneNumber,
+      ...(looksLikeEmail
+        ? {email: trimmedIdentifier.toLowerCase()}
+        : {phoneNumber: trimmedIdentifier}),
       password,
       deviceId,
     };
@@ -87,7 +91,7 @@ const LoginScreen: React.FC<Props> = ({navigation}) => {
   };
 
   const handleUseTestAccount = () => {
-    setPhoneNumber('5550001111');
+    setIdentifier('5550001111');
     setPassword('TestPass123!');
     setErrorMessage(null);
   };
@@ -97,11 +101,12 @@ const LoginScreen: React.FC<Props> = ({navigation}) => {
       <Text style={globalStyles.title}>Login</Text>
       <TextInput
         style={[globalStyles.input, styles.input]}
-        placeholder="Phone number"
-        value={phoneNumber}
-        keyboardType="phone-pad"
+        placeholder="Phone number or email"
+        value={identifier}
+        keyboardType="email-address"
+        autoCapitalize="none"
         onChangeText={text => {
-          setPhoneNumber(text);
+          setIdentifier(text);
           if (errorMessage) {
             setErrorMessage(null);
           }
