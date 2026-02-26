@@ -218,31 +218,55 @@ router.post("/login/new", authSignupLimiter, async (req, res) => {
  *         required: true
  *         schema:
  *           type: object
- *           required: [phoneNumber, deviceId]
+ *           required: [deviceId]
  *           properties:
  *             phoneNumber:
  *               type: string
+ *               description: Required when email is not provided.
+ *             email:
+ *               type: string
+ *               format: email
+ *               description: Required when phoneNumber is not provided.
  *             deviceId:
  *               type: string
  *     responses:
  *       200:
- *         description: Reset flow started (or no-op for unknown number)
+ *         description: Reset flow started (or no-op for unknown identifier)
  */
 router.post("/login/forgot", authForgotLimiter, async (req, res) => {
   const phoneNumber = normalizePhone(req.body.phoneNumber);
+  const email = normalizeEmail(req.body.email);
   const deviceId = String(req.body.deviceId || "").trim();
+  const hasPhone = phoneNumber.length > 0;
+  const hasEmail = email.length > 0;
 
-  if (!phoneNumber || !deviceId) {
+  if (!deviceId) {
     return res.status(400).json({
       success: false,
-      message: "phoneNumber and deviceId are required.",
+      message: "deviceId is required.",
+    });
+  }
+
+  if ((hasPhone && hasEmail) || (!hasPhone && !hasEmail)) {
+    return res.status(400).json({
+      success: false,
+      message: "Provide either phoneNumber or email, but not both.",
+    });
+  }
+
+  if (hasEmail && !isValidEmail(email)) {
+    return res.status(400).json({
+      success: false,
+      message: "A valid email is required.",
     });
   }
 
   return res.status(200).json({
     success: true,
-    message: "Reset request sent. Check your messages.",
-    deliveryChannel: "sms",
+    message: hasEmail
+      ? "Reset request sent. Check your email."
+      : "Reset request sent. Check your messages.",
+    deliveryChannel: hasEmail ? "email" : "sms",
   });
 });
 

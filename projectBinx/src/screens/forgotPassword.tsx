@@ -5,7 +5,7 @@ import LoginService, {Credentials} from '../services/loginService';
 import globalStyles from '../styles/globalStyles';
 
 const ForgotPassword = () => {
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [deviceId, setDeviceId] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -21,9 +21,20 @@ const ForgotPassword = () => {
   }, []);
 
   const handleResetPassword = async () => {
-    const trimmedPhoneNumber = phoneNumber.trim();
-    if (!trimmedPhoneNumber) {
-      setErrorMessage('Phone number is required.');
+    const trimmedIdentifier = identifier.trim();
+
+    if (!trimmedIdentifier) {
+      setErrorMessage('Phone number or email is required.');
+      return;
+    }
+
+    const looksLikeEmail = trimmedIdentifier.includes('@');
+
+    if (
+      looksLikeEmail &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedIdentifier)
+    ) {
+      setErrorMessage('Please enter a valid email address.');
       return;
     }
 
@@ -36,14 +47,20 @@ const ForgotPassword = () => {
     setSuccessMessage(null);
 
     const credentials: Credentials = {
-      phoneNumber: trimmedPhoneNumber,
+      ...(looksLikeEmail
+        ? {email: trimmedIdentifier.toLowerCase()}
+        : {phoneNumber: trimmedIdentifier}),
       deviceId,
     };
 
     try {
       setLoading(true);
       await LoginService.forgotPassword(credentials);
-      setSuccessMessage('Reset request sent. Check your messages.');
+      setSuccessMessage(
+        looksLikeEmail
+          ? 'Reset request sent. Check your email.'
+          : 'Reset request sent. Check your messages.',
+      );
     } catch (error) {
       setErrorMessage('Unable to submit reset request right now.');
     } finally {
@@ -56,11 +73,12 @@ const ForgotPassword = () => {
       <Text style={globalStyles.title}>Forgot Password</Text>
       <TextInput
         style={[globalStyles.input, styles.input]}
-        placeholder="Phone Number"
-        keyboardType="phone-pad"
-        value={phoneNumber}
+        placeholder="Phone number or email"
+        keyboardType="email-address"
+        autoCapitalize="none"
+        value={identifier}
         onChangeText={text => {
-          setPhoneNumber(text);
+          setIdentifier(text);
           if (errorMessage) {
             setErrorMessage(null);
           }

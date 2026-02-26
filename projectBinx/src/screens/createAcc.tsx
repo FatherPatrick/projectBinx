@@ -112,7 +112,7 @@ const CreateAccount: React.FC<Props> = ({navigation}) => {
         }}
       />
       <TextInput
-        style={[globalStyles.input, styles.input]}
+        style={[globalStyles.input, styles.input, styles.passwordSectionStart]}
         placeholder="Password"
         secureTextEntry={true}
         value={password}
@@ -153,6 +153,9 @@ const CreateAccount: React.FC<Props> = ({navigation}) => {
 const styles = StyleSheet.create({
   input: {
     height: 40,
+  },
+  passwordSectionStart: {
+    marginTop: 25,
   },
   orText: {
     marginBottom: 8,
