@@ -14,6 +14,7 @@ import {
 import {RouteProp} from '@react-navigation/native';
 import {BottomTabNavigationProp} from '@react-navigation/bottom-tabs';
 import PollService from '../services/pollService';
+import LocationService from '../services/locationService';
 import {PollData} from '../types/pollTypes';
 import SimplePoll from '../components/pollTypes/simplePoll';
 import SliderPoll from '../components/pollTypes/sliderPoll';
@@ -188,9 +189,17 @@ const Home: React.FC<Props> = ({navigation, route}) => {
       }
 
       try {
+        const location = await LocationService.getCurrentPositionWithPermission(
+          {
+            maximumAge: 60000,
+          },
+        );
+
         const fetchedPolls = await PollService.getPagedPolls({
           page: pageToLoad,
           pageSize: PAGE_SIZE,
+          viewerLatitude: location.latitude,
+          viewerLongitude: location.longitude,
         });
 
         const hydratedPolls = await withReactionCounts(fetchedPolls);

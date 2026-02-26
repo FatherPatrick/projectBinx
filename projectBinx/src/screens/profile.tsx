@@ -17,6 +17,7 @@ import {StackNavigationProp} from '@react-navigation/stack';
 import PollService from '../services/pollService';
 import LoginService from '../services/loginService';
 import SessionService from '../services/sessionService';
+import LocationService from '../services/locationService';
 import AnonymousNameService from '../services/anonymousNameService';
 import {PollData} from '../types/pollTypes';
 import {RootStackParamList} from '../types/navigation';
@@ -192,10 +193,18 @@ const Profile = () => {
 
       try {
         setErrorMessage(null);
+        const location = await LocationService.getCurrentPositionWithPermission(
+          {
+            maximumAge: 60000,
+          },
+        );
+
         const fetchedPolls = await PollService.getPagedPolls({
           user: username,
           page: pageToLoad,
           pageSize: PAGE_SIZE,
+          viewerLatitude: location.latitude,
+          viewerLongitude: location.longitude,
         });
 
         const userPolls = fetchedPolls.filter(

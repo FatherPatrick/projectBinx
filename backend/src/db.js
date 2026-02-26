@@ -18,6 +18,30 @@ const checkDbHealth = async () => {
 const hashPassword = (password) =>
   createHash("sha256").update(password).digest("hex");
 
+const parseCoordinateOrDefault = (value, fallback, min, max) => {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed < min || parsed > max) {
+    return fallback;
+  }
+
+  return parsed;
+};
+
+const pollBackfillLatitude = parseCoordinateOrDefault(
+  process.env.POLL_BACKFILL_LATITUDE,
+  39.8283,
+  -90,
+  90
+);
+
+const pollBackfillLongitude = parseCoordinateOrDefault(
+  process.env.POLL_BACKFILL_LONGITUDE,
+  -98.5795,
+  -180,
+  180
+);
+
 const ensureAuthSchema = async () => {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
@@ -156,6 +180,19 @@ const ensurePollSchema = async () => {
   );
   await pool.query(
     `ALTER TABLE polls ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();`
+  );
+  await pool.query(
+    `ALTER TABLE polls ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;`
+  );
+  await pool.query(
+    `ALTER TABLE polls ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;`
+  );
+  await pool.query(
+    `UPDATE polls
+     SET latitude = $1,
+         longitude = $2
+     WHERE latitude IS NULL OR longitude IS NULL;`,
+    [pollBackfillLatitude, pollBackfillLongitude]
   );
 
   await pool.query(

@@ -43,6 +43,14 @@ const normalizePollType = (value) => {
 
 const allowedPollTypes = new Set(["simple", "slider", "ama"]);
 
+const parseCoordinate = value => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : Number.NaN;
+};
+
+const isValidLatitude = value => value >= -90 && value <= 90;
+const isValidLongitude = value => value >= -180 && value <= 180;
+
 /**
  * @swagger
  * /api/poll/paged:
@@ -67,6 +75,16 @@ const allowedPollTypes = new Set(["simple", "slider", "ama"]);
  *         name: type
  *         schema:
  *           type: string
+ *       - in: query
+ *         name: viewerLatitude
+ *         required: true
+ *         schema:
+ *           type: number
+ *       - in: query
+ *         name: viewerLongitude
+ *         required: true
+ *         schema:
+ *           type: number
  *     responses:
  *       200:
  *         description: Poll list
@@ -81,9 +99,26 @@ router.get("/poll/paged", async (req, res) => {
     return res.status(400).json({ message: "Invalid poll type filter." });
   }
 
+  const viewerLatitude = parseCoordinate(req.query.viewerLatitude);
+  const viewerLongitude = parseCoordinate(req.query.viewerLongitude);
+
+  if (Number.isNaN(viewerLatitude) || Number.isNaN(viewerLongitude)) {
+    return res.status(400).json({
+      message: "viewerLatitude and viewerLongitude are required.",
+    });
+  }
+
+  if (!isValidLatitude(viewerLatitude) || !isValidLongitude(viewerLongitude)) {
+    return res.status(400).json({
+      message: "viewerLatitude or viewerLongitude is out of range.",
+    });
+  }
+
   try {
     const polls = await getPagedPolls({
       ...req.query,
+      viewerLatitude,
+      viewerLongitude,
       ...(type ? { type } : {}),
     });
     return res.status(200).json(polls);
@@ -108,6 +143,8 @@ router.get("/poll/paged", async (req, res) => {
 router.post("/poll", pollCreateLimiter, async (req, res) => {
   const poll = req.body;
   const pollType = normalizePollType(poll?.type);
+  const latitude = parseCoordinate(poll?.latitude);
+  const longitude = parseCoordinate(poll?.longitude);
 
   if (!poll?.title || !poll?.type || !Array.isArray(poll?.options)) {
     return res.status(400).json({
@@ -119,10 +156,24 @@ router.post("/poll", pollCreateLimiter, async (req, res) => {
     return res.status(400).json({ message: "Invalid poll type." });
   }
 
+  if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
+    return res.status(400).json({
+      message: "latitude and longitude are required.",
+    });
+  }
+
+  if (!isValidLatitude(latitude) || !isValidLongitude(longitude)) {
+    return res.status(400).json({
+      message: "latitude or longitude is out of range.",
+    });
+  }
+
   try {
     const createdPoll = await createPoll({
       ...poll,
       type: pollType,
+      latitude,
+      longitude,
       allowComments: pollType === "ama" ? true : Boolean(poll.allowComments),
     });
     return res.status(201).json(createdPoll);
@@ -155,6 +206,8 @@ router.post("/poll", pollCreateLimiter, async (req, res) => {
 router.put("/poll/update/:id", pollUpdateLimiter, async (req, res) => {
   const pollId = Number(req.params.id);
   const pollType = normalizePollType(req.body?.type);
+  const latitude = parseCoordinate(req.body?.latitude);
+  const longitude = parseCoordinate(req.body?.longitude);
 
   if (Number.isNaN(pollId)) {
     return res.status(400).json({ message: "Invalid poll id." });
@@ -164,10 +217,24 @@ router.put("/poll/update/:id", pollUpdateLimiter, async (req, res) => {
     return res.status(400).json({ message: "Invalid poll type." });
   }
 
+  if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
+    return res.status(400).json({
+      message: "latitude and longitude are required.",
+    });
+  }
+
+  if (!isValidLatitude(latitude) || !isValidLongitude(longitude)) {
+    return res.status(400).json({
+      message: "latitude or longitude is out of range.",
+    });
+  }
+
   try {
     const updatedPoll = await updatePollById(pollId, {
       ...req.body,
       type: pollType,
+      latitude,
+      longitude,
       allowComments:
         pollType === "ama" ? true : Boolean(req.body.allowComments),
     });

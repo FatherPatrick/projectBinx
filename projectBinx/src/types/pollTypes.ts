@@ -5,6 +5,8 @@ export interface PollQueryParams {
   pageSize?: number;
   user?: string;
   type?: PollType;
+  viewerLatitude?: number;
+  viewerLongitude?: number;
 }
 
 export interface VoteRequest {
@@ -21,6 +23,8 @@ export interface PollData {
   description?: string;
   type: PollType;
   allowComments: boolean;
+  latitude?: number;
+  longitude?: number;
   commentCount?: number;
   likes?: number;
   dislikes?: number;

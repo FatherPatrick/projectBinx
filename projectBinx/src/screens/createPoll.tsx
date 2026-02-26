@@ -13,6 +13,7 @@ import {
 import {BottomTabNavigationProp} from '@react-navigation/bottom-tabs';
 import PollService from '../services/pollService';
 import SessionService from '../services/sessionService';
+import LocationService from '../services/locationService';
 import {MainTabParamList} from '../types/navigation';
 import {PollData, PollType} from '../types/pollTypes';
 import globalStyles from '../styles/globalStyles';
@@ -310,6 +311,16 @@ const CreatePoll: React.FC<Props> = ({navigation}) => {
     }
 
     const sessionUser = SessionService.getCurrentUser();
+    let location;
+
+    try {
+      location = await LocationService.getCurrentPositionWithPermission({
+        maximumAge: 60000,
+      });
+    } catch (error) {
+      setErrorMessage('Location is required to create a poll.');
+      return;
+    }
 
     const newPoll: PollData = {
       user: sessionUser?.username ?? 'current_user',
@@ -317,6 +328,8 @@ const CreatePoll: React.FC<Props> = ({navigation}) => {
       description: trimmedDescription || undefined,
       type: pollType,
       allowComments: isAmaPoll ? true : allowComments,
+      latitude: location.latitude,
+      longitude: location.longitude,
       options: cleanedOptions.map((optionText, index) => ({
         optionTypeId: index + 1,
         optionText,

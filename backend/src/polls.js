@@ -1,5 +1,17 @@
 const { pool } = require("./db");
 
+const MAX_POLL_DISTANCE_MILES = 25;
+const EARTH_RADIUS_MILES = 3959;
+
+const normalizeCoordinate = (value) => {
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
 const mapPollRow = (pollRow) => ({
   pollId: pollRow.id,
   user: pollRow.created_by,
@@ -7,6 +19,14 @@ const mapPollRow = (pollRow) => ({
   description: pollRow.description,
   type: pollRow.poll_type,
   allowComments: pollRow.allow_comments,
+  latitude:
+    pollRow.latitude === null || pollRow.latitude === undefined
+      ? undefined
+      : Number(pollRow.latitude),
+  longitude:
+    pollRow.longitude === null || pollRow.longitude === undefined
+      ? undefined
+      : Number(pollRow.longitude),
   commentCount: Number(pollRow.comment_count ?? 0),
   likes: Number(pollRow.likes ?? 0),
   dislikes: Number(pollRow.dislikes ?? 0),
@@ -49,12 +69,38 @@ const attachOptionsToPolls = async (polls) => {
   }));
 };
 
-const getPagedPolls = async ({ page = 1, pageSize = 20, user, type }) => {
+const getPagedPolls = async ({
+  page = 1,
+  pageSize = 20,
+  user,
+  type,
+  viewerLatitude,
+  viewerLongitude,
+}) => {
   const safePage = Math.max(1, Number(page) || 1);
   const safePageSize = Math.min(100, Math.max(1, Number(pageSize) || 20));
+  const safeViewerLatitude = Number(viewerLatitude);
+  const safeViewerLongitude = Number(viewerLongitude);
 
   const whereClauses = [];
   const values = [];
+
+  values.push(safeViewerLatitude);
+  const viewerLatitudeIndex = values.length;
+  values.push(safeViewerLongitude);
+  const viewerLongitudeIndex = values.length;
+
+  whereClauses.push("p.latitude IS NOT NULL");
+  whereClauses.push("p.longitude IS NOT NULL");
+  whereClauses.push(`(
+      ${EARTH_RADIUS_MILES} * ACOS(
+        LEAST(1, GREATEST(-1,
+          COS(RADIANS($${viewerLatitudeIndex})) * COS(RADIANS(p.latitude)) *
+          COS(RADIANS(p.longitude) - RADIANS($${viewerLongitudeIndex})) +
+          SIN(RADIANS($${viewerLatitudeIndex})) * SIN(RADIANS(p.latitude))
+        ))
+      )
+    ) <= ${MAX_POLL_DISTANCE_MILES}`);
 
   if (user) {
     values.push(user);
@@ -81,6 +127,8 @@ const getPagedPolls = async ({ page = 1, pageSize = 20, user, type }) => {
             p.description,
             p.poll_type,
             p.allow_comments,
+            p.latitude,
+            p.longitude,
             p.created_at,
             p.updated_at,
             COALESCE(comment_counts.comment_count, 0)::int AS comment_count,
@@ -113,20 +161,24 @@ const getPagedPolls = async ({ page = 1, pageSize = 20, user, type }) => {
 const createPoll = async (poll) => {
   const client = await pool.connect();
   const allowComments = poll.type === "ama" ? true : Boolean(poll.allowComments);
+  const latitude = normalizeCoordinate(poll.latitude);
+  const longitude = normalizeCoordinate(poll.longitude);
 
   try {
     await client.query("BEGIN");
 
     const pollInsert = await client.query(
-      `INSERT INTO polls (created_by, title, description, poll_type, allow_comments)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, created_by, title, description, poll_type, allow_comments, created_at, updated_at`,
+      `INSERT INTO polls (created_by, title, description, poll_type, allow_comments, latitude, longitude)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, created_by, title, description, poll_type, allow_comments, latitude, longitude, created_at, updated_at`,
       [
         poll.user,
         poll.title,
         poll.description ?? null,
         poll.type,
         allowComments,
+        latitude,
+        longitude,
       ]
     );
 
@@ -157,6 +209,8 @@ const createPoll = async (poll) => {
 const updatePollById = async (pollId, poll) => {
   const client = await pool.connect();
   const allowComments = poll.type === "ama" ? true : Boolean(poll.allowComments);
+  const latitude = normalizeCoordinate(poll.latitude);
+  const longitude = normalizeCoordinate(poll.longitude);
 
   try {
     await client.query("BEGIN");
@@ -168,9 +222,11 @@ const updatePollById = async (pollId, poll) => {
            poll_type = $4,
            allow_comments = $5,
            created_by = $6,
+           latitude = COALESCE($7, latitude),
+           longitude = COALESCE($8, longitude),
            updated_at = NOW()
        WHERE id = $1
-       RETURNING id, created_by, title, description, poll_type, allow_comments, created_at, updated_at`,
+       RETURNING id, created_by, title, description, poll_type, allow_comments, latitude, longitude, created_at, updated_at`,
       [
         pollId,
         poll.title,
@@ -178,6 +234,8 @@ const updatePollById = async (pollId, poll) => {
         poll.type,
         allowComments,
         poll.user,
+        latitude,
+        longitude,
       ]
     );
 
@@ -226,6 +284,8 @@ const findPollById = async (pollId) => {
             p.description,
             p.poll_type,
             p.allow_comments,
+            p.latitude,
+            p.longitude,
             p.created_at,
             p.updated_at,
             COALESCE(comment_counts.comment_count, 0)::int AS comment_count,

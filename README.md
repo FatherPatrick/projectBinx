@@ -117,6 +117,8 @@ Backend DB settings are read from environment variables. For local compose defau
 - `DB_USER=postgres`
 - `DB_PASSWORD=postgres`
 - `DB_PORT=5432`
+- `POLL_BACKFILL_LATITUDE=39.8283` (optional, used to backfill existing polls missing coordinates)
+- `POLL_BACKFILL_LONGITUDE=-98.5795` (optional, used to backfill existing polls missing coordinates)
 
 You can customize these by creating a root `.env` file before running `npm run stack:up`.
 
