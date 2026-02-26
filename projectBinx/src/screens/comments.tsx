@@ -46,11 +46,19 @@ interface CommentData {
   dislikedByCurrentUser?: boolean;
 }
 
-type CommentSortOption = 'most-liked' | 'most-disliked' | 'newest' | 'oldest';
+type CommentSortOption =
+  | 'most-liked'
+  | 'most-disliked'
+  | 'most-replies'
+  | 'least-replies'
+  | 'newest'
+  | 'oldest';
 
 const COMMENT_SORT_OPTIONS: Array<{value: CommentSortOption; label: string}> = [
   {value: 'most-liked', label: 'Most Liked'},
   {value: 'most-disliked', label: 'Most Disliked'},
+  {value: 'most-replies', label: 'Most Replies'},
+  {value: 'least-replies', label: 'Least Replies'},
   {value: 'newest', label: 'Newest'},
   {value: 'oldest', label: 'Oldest'},
 ];
@@ -115,7 +123,7 @@ const Comments: React.FC<Props> = ({route, navigation}) => {
   });
   const filterButtonRef = useRef<TouchableOpacity | null>(null);
   const FILTER_MENU_WIDTH = 170;
-  const FILTER_MENU_HEIGHT = 164;
+  const FILTER_MENU_HEIGHT = 236;
   const {width: screenWidth, height: screenHeight} = Dimensions.get('window');
   const hasUserScrolledRef = useRef(false);
 
@@ -256,6 +264,37 @@ const Comments: React.FC<Props> = ({route, navigation}) => {
     return 0;
   };
 
+  const getReplyCountForSort = useCallback(
+    (comment: CommentData): number => {
+      if (comment.commentId === undefined) {
+        return 0;
+      }
+
+      let count = 0;
+      const queue: number[] = [comment.commentId];
+
+      while (queue.length > 0) {
+        const parentId = queue.shift();
+
+        if (parentId === undefined) {
+          continue;
+        }
+
+        const childComments = repliesByParentId[parentId] ?? [];
+        count += childComments.length;
+
+        childComments.forEach(childComment => {
+          if (childComment.commentId !== undefined) {
+            queue.push(childComment.commentId);
+          }
+        });
+      }
+
+      return count;
+    },
+    [repliesByParentId],
+  );
+
   const sortCommentsByCurrentFilter = useCallback(
     (items: CommentData[]): CommentData[] => {
       const nextItems = [...items];
@@ -267,6 +306,20 @@ const Comments: React.FC<Props> = ({route, navigation}) => {
 
         if (commentSortBy === 'most-disliked') {
           return rightComment.dislikes - leftComment.dislikes;
+        }
+
+        if (commentSortBy === 'most-replies') {
+          return (
+            getReplyCountForSort(rightComment) -
+            getReplyCountForSort(leftComment)
+          );
+        }
+
+        if (commentSortBy === 'least-replies') {
+          return (
+            getReplyCountForSort(leftComment) -
+            getReplyCountForSort(rightComment)
+          );
         }
 
         if (commentSortBy === 'oldest') {
@@ -284,7 +337,7 @@ const Comments: React.FC<Props> = ({route, navigation}) => {
 
       return nextItems;
     },
-    [commentSortBy],
+    [commentSortBy, getReplyCountForSort],
   );
 
   const sortedTopLevelComments = useMemo(

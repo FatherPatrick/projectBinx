@@ -2,6 +2,7 @@ const express = require("express");
 const {
   createSession,
   createUser,
+  deleteUserAccount,
   findUserByEmail,
   findUserByPhone,
   toPublicUser,
@@ -243,6 +244,69 @@ router.post("/login/forgot", authForgotLimiter, async (req, res) => {
     message: "Reset request sent. Check your messages.",
     deliveryChannel: "sms",
   });
+});
+
+router.post("/login/delete-account", async (req, res) => {
+  const userIdRaw = req.body.userId;
+  const userId =
+    userIdRaw === undefined || userIdRaw === null
+      ? undefined
+      : Number(userIdRaw);
+  const phoneNumber = normalizePhone(req.body.phoneNumber);
+  const email = normalizeEmail(req.body.email);
+  const confirmationPhrase = String(req.body.confirmationPhrase || "").trim();
+
+  if (
+    confirmationPhrase.toLowerCase() !== "deletemyaccount".toLowerCase()
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: "Confirmation phrase is invalid.",
+    });
+  }
+
+  if (userId !== undefined && Number.isNaN(userId)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid userId.",
+    });
+  }
+
+  if (
+    userId === undefined &&
+    phoneNumber.length === 0 &&
+    email.length === 0
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: "Provide userId, phoneNumber, or email.",
+    });
+  }
+
+  try {
+    const deleted = await deleteUserAccount({
+      userId,
+      phoneNumber: phoneNumber || undefined,
+      email: email || undefined,
+    });
+
+    if (!deleted) {
+      return res.status(404).json({
+        success: false,
+        message: "Account not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Account deleted successfully.",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Unable to delete account right now.",
+    });
+  }
 });
 
 module.exports = router;

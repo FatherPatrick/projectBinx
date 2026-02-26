@@ -3,6 +3,7 @@ import {API_BASE_URL} from '../uri';
 import {toServiceError} from './serviceError';
 import {
   CreateAccountResponse,
+  DeleteAccountResponse,
   ForgotPasswordResponse,
   LoginResponse,
 } from '../types/authTypes';
@@ -11,6 +12,8 @@ export interface Credentials {
   phoneNumber?: string;
   email?: string;
   password?: string;
+  userId?: number | string;
+  confirmationPhrase?: string;
   deviceId: string;
 }
 
@@ -51,6 +54,23 @@ const LoginService = {
       return response.data;
     } catch (error) {
       throw toServiceError(error, 'Unable to reset password right now.');
+    }
+  },
+
+  deleteAccount: async (
+    payload: Pick<
+      Credentials,
+      'userId' | 'phoneNumber' | 'email' | 'confirmationPhrase'
+    >,
+  ): Promise<DeleteAccountResponse> => {
+    try {
+      const response = await axios.post<DeleteAccountResponse>(
+        `${API_BASE_URL}/login/delete-account`,
+        payload,
+      );
+      return response.data;
+    } catch (error) {
+      throw toServiceError(error, 'Unable to delete account right now.');
     }
   },
 };

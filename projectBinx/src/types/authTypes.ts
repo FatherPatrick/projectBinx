@@ -27,3 +27,9 @@ export interface ForgotPasswordResponse {
   deliveryChannel?: string;
   [key: string]: unknown;
 }
+
+export interface DeleteAccountResponse {
+  success?: boolean;
+  message?: string;
+  [key: string]: unknown;
+}

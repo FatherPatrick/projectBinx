@@ -74,11 +74,51 @@ const createSession = async ({ userId, deviceId }) => {
   return { token, refreshToken };
 };
 
+const deleteUserAccount = async ({ userId, phoneNumber, email }) => {
+  if (userId !== undefined && userId !== null) {
+    const deletedById = await pool.query(
+      `DELETE FROM users
+       WHERE id = $1
+       RETURNING id`,
+      [userId]
+    );
+
+    return deletedById.rowCount > 0;
+  }
+
+  if (phoneNumber) {
+    const deletedByPhone = await pool.query(
+      `DELETE FROM users
+       WHERE phone_number = $1
+       RETURNING id`,
+      [phoneNumber]
+    );
+
+    if (deletedByPhone.rowCount > 0) {
+      return true;
+    }
+  }
+
+  if (email) {
+    const deletedByEmail = await pool.query(
+      `DELETE FROM users
+       WHERE LOWER(email) = LOWER($1)
+       RETURNING id`,
+      [email]
+    );
+
+    return deletedByEmail.rowCount > 0;
+  }
+
+  return false;
+};
+
 module.exports = {
   findUserByPhone,
   findUserByEmail,
   createUser,
   validateUserPassword,
   createSession,
+  deleteUserAccount,
   toPublicUser,
 };
