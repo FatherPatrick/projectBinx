@@ -7,12 +7,12 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from 'react-native';
-import LoginService, {Credentials} from '../services/loginService';
+import LoginService, {Credentials} from '../../services/loginService';
 import DeviceInfo from 'react-native-device-info';
 import {StackNavigationProp} from '@react-navigation/stack';
-import {RootStackParamList} from '../types/navigation';
-import SessionService from '../services/sessionService';
-import globalStyles from '../styles/globalStyles';
+import {RootStackParamList} from '../../types/navigation';
+import SessionService from '../../services/sessionService';
+import globalStyles from '../../styles/globalStyles';
 
 interface Props {
   navigation: StackNavigationProp<RootStackParamList, 'Login'>;

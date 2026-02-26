@@ -31,7 +31,7 @@ const LoginService = {
     }
   },
 
-  createAcc: async (login: Credentials): Promise<CreateAccountResponse> => {
+  createAccount: async (login: Credentials): Promise<CreateAccountResponse> => {
     try {
       const response = await axios.post<CreateAccountResponse>(
         `${API_BASE_URL}/login/new`,

@@ -14,8 +14,8 @@ import PollService from '../../services/pollService';
 import SessionService from '../../services/sessionService';
 import pollStyles from '../../styles/pollStyles';
 import theme from '../../styles/theme';
-import SubmitVoteButton from '../submitVoteButton';
-import {MoreOptionsButton} from '../moreOptionsButton';
+import SubmitVoteButton from '../SubmitVoteButton';
+import {MoreOptionsButton} from '../MoreOptionsButton';
 
 interface SliderPollProps {
   poll: PollData;

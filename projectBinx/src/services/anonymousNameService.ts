@@ -66,6 +66,41 @@ const avatarPalette = [
   theme.colors.textSecondary,
 ];
 
+const avatarEmojiPalette = [
+  '😀',
+  '😄',
+  '😎',
+  '🤖',
+  '🦊',
+  '🐼',
+  '🐯',
+  '🦁',
+  '🐸',
+  '🐙',
+  '🦉',
+  '🦄',
+  '🌟',
+  '🌙',
+  '☀️',
+  '🌈',
+  '🔥',
+  '⚡',
+  '🍀',
+  '🌻',
+  '🍕',
+  '🍩',
+  '🍉',
+  '🎮',
+  '🎧',
+  '🎲',
+  '🚀',
+  '🛸',
+  '🏔️',
+  '🌊',
+  '🎯',
+  '🧩',
+];
+
 const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
 const hashToNumber = (value: string): number => {
@@ -200,6 +235,12 @@ const AnonymousNameService = {
       initials,
       backgroundColor,
     };
+  },
+
+  getEmojiForInitials: (initials: string): string => {
+    const normalizedInitials = normalizeInitials(initials);
+    const hash = hashToNumber(normalizedInitials);
+    return avatarEmojiPalette[hash % avatarEmojiPalette.length];
   },
 };
 

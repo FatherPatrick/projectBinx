@@ -1,16 +1,16 @@
 import React, {useEffect, useState} from 'react';
 import {View, Text, TextInput, Button, StyleSheet} from 'react-native';
 import DeviceInfo from 'react-native-device-info';
-import LoginService, {Credentials} from '../services/loginService';
 import {StackNavigationProp} from '@react-navigation/stack';
-import {RootStackParamList} from '../types/navigation';
-import globalStyles from '../styles/globalStyles';
+import {RootStackParamList} from '../../types/navigation';
+import LoginService, {Credentials} from '../../services/loginService';
+import globalStyles from '../../styles/globalStyles';
 
 interface Props {
   navigation: StackNavigationProp<RootStackParamList, 'CreateAccount'>;
 }
 
-const CreateAccount: React.FC<Props> = ({navigation}) => {
+const CreateAccountScreen: React.FC<Props> = ({navigation}) => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -72,7 +72,7 @@ const CreateAccount: React.FC<Props> = ({navigation}) => {
 
     try {
       setLoading(true);
-      await LoginService.createAcc(credentials);
+      await LoginService.createAccount(credentials);
       setSuccessMessage('Account created. Returning to login...');
       navigation.navigate('Login');
     } catch (error) {
@@ -164,4 +164,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CreateAccount;
+export default CreateAccountScreen;

@@ -10,7 +10,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import ConfirmDialog from './confirmDialog';
+import ConfirmDialog from './ConfirmDialog';
 import theme from '../styles/theme';
 
 interface MoreOptionsButtonProps {

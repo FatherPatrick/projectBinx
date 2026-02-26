@@ -7,9 +7,9 @@ import {RootStackParamList} from '../../types/navigation';
 import PollService from '../../services/pollService';
 import SessionService from '../../services/sessionService';
 import pollStyles from '../../styles/pollStyles';
-import SubmitVoteButton from '../submitVoteButton';
+import SubmitVoteButton from '../SubmitVoteButton';
 import theme from '../../styles/theme';
-import {MoreOptionsButton} from '../moreOptionsButton';
+import {MoreOptionsButton} from '../MoreOptionsButton';
 
 interface AmaPollProps {
   poll: PollData;

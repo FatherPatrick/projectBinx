@@ -1,10 +1,10 @@
 import React, {useEffect, useState} from 'react';
 import {View, Text, TextInput, Button, StyleSheet} from 'react-native';
 import DeviceInfo from 'react-native-device-info';
-import LoginService, {Credentials} from '../services/loginService';
-import globalStyles from '../styles/globalStyles';
+import LoginService, {Credentials} from '../../services/loginService';
+import globalStyles from '../../styles/globalStyles';
 
-const ForgotPassword = () => {
+const ForgotPasswordScreen = () => {
   const [identifier, setIdentifier] = useState('');
   const [deviceId, setDeviceId] = useState('');
   const [loading, setLoading] = useState(false);
@@ -105,4 +105,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ForgotPassword;
+export default ForgotPasswordScreen;
