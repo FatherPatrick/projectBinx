@@ -67,6 +67,8 @@ export interface PollComment {
   parentCommentId: number | null;
   authorName: string;
   authorAlias?: string;
+  authorAvatarInitials?: string;
+  authorAvatarColor?: string;
   content: string;
   likes: number;
   dislikes: number;

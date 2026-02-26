@@ -1,3 +1,5 @@
+import theme from '../styles/theme';
+
 const adjectives = [
   'Amber',
   'Brisk',
@@ -56,6 +58,16 @@ const nouns = [
   'Zephyr',
 ];
 
+const avatarPalette = [
+  theme.colors.primary,
+  theme.colors.link,
+  theme.colors.success,
+  theme.colors.dangerStrong,
+  theme.colors.textSecondary,
+];
+
+const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
 const hashToNumber = (value: string): number => {
   let hash = 0;
 
@@ -65,6 +77,48 @@ const hashToNumber = (value: string): number => {
 
   return hash;
 };
+
+const normalizeInitials = (value: string): string => {
+  const cleaned = value
+    .replace(/[^a-zA-Z]/g, '')
+    .toUpperCase()
+    .slice(0, 2);
+
+  if (cleaned.length === 2) {
+    return cleaned;
+  }
+
+  if (cleaned.length === 1) {
+    return `${cleaned}${cleaned}`;
+  }
+
+  return 'AA';
+};
+
+const getInitialsFromDisplayName = (displayName: string): string => {
+  const words = String(displayName || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (words.length >= 2) {
+    return normalizeInitials(`${words[0][0]}${words[1][0]}`);
+  }
+
+  if (words.length === 1) {
+    return normalizeInitials(words[0].slice(0, 2));
+  }
+
+  return 'AA';
+};
+
+const randomInt = (maxExclusive: number): number =>
+  Math.floor(Math.random() * maxExclusive);
+
+export interface ProfileAvatar {
+  initials: string;
+  backgroundColor: string;
+}
 
 const getAliasFromSeed = (seed: string): string => {
   const hash = hashToNumber(seed);
@@ -91,6 +145,61 @@ const AnonymousNameService = {
   generateRandomAlias: (): string => {
     const randomSeed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     return getAliasFromSeed(randomSeed);
+  },
+
+  getDeterministicAvatar: (
+    identifier: string,
+    displayName?: string,
+  ): ProfileAvatar => {
+    const seed = `${String(identifier || '')
+      .trim()
+      .toLowerCase()}|${String(displayName || '')
+      .trim()
+      .toLowerCase()}`;
+    const hash = hashToNumber(seed || 'anonymous');
+
+    return {
+      initials: getInitialsFromDisplayName(displayName || identifier),
+      backgroundColor: avatarPalette[hash % avatarPalette.length],
+    };
+  },
+
+  generateRandomAvatar: (): ProfileAvatar => {
+    const first = alphabet[randomInt(alphabet.length)];
+    const second = alphabet[randomInt(alphabet.length)];
+    const color = avatarPalette[randomInt(avatarPalette.length)];
+
+    return {
+      initials: `${first}${second}`,
+      backgroundColor: color,
+    };
+  },
+
+  sanitizeAvatar: (
+    avatar: Partial<ProfileAvatar> | undefined,
+    fallbackIdentifier: string,
+    fallbackDisplayName?: string,
+  ): ProfileAvatar => {
+    const fallback = AnonymousNameService.getDeterministicAvatar(
+      fallbackIdentifier,
+      fallbackDisplayName,
+    );
+
+    const initials =
+      typeof avatar?.initials === 'string' && avatar.initials.trim().length > 0
+        ? normalizeInitials(avatar.initials)
+        : fallback.initials;
+
+    const backgroundColor =
+      typeof avatar?.backgroundColor === 'string' &&
+      avatar.backgroundColor.trim().length > 0
+        ? avatar.backgroundColor
+        : fallback.backgroundColor;
+
+    return {
+      initials,
+      backgroundColor,
+    };
   },
 };
 

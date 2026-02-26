@@ -221,6 +221,12 @@ const ensurePollSchema = async () => {
   await pool.query(
     `ALTER TABLE poll_comments ADD COLUMN IF NOT EXISTS author_alias VARCHAR(120);`
   );
+  await pool.query(
+    `ALTER TABLE poll_comments ADD COLUMN IF NOT EXISTS author_avatar_initials VARCHAR(8);`
+  );
+  await pool.query(
+    `ALTER TABLE poll_comments ADD COLUMN IF NOT EXISTS author_avatar_color VARCHAR(32);`
+  );
 
   await pool.query(`
     CREATE INDEX IF NOT EXISTS ix_poll_comments_poll_id_created_at

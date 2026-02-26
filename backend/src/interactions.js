@@ -18,6 +18,8 @@ const mapCommentRow = (row) => ({
   parentCommentId: row.parent_comment_id,
   authorName: row.author_name,
   authorAlias: row.author_alias,
+  authorAvatarInitials: row.author_avatar_initials,
+  authorAvatarColor: row.author_avatar_color,
   content: row.content,
   likes: row.likes,
   dislikes: row.dislikes,
@@ -93,6 +95,8 @@ const createComment = async ({
   pollId,
   authorName,
   authorAlias,
+  authorAvatarInitials,
+  authorAvatarColor,
   content,
   parentCommentId,
 }) => {
@@ -142,13 +146,46 @@ const createComment = async ({
   }
 
   const createdComment = await pool.query(
-    `INSERT INTO poll_comments (poll_id, author_name, author_alias, content, parent_comment_id)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING id, poll_id, parent_comment_id, author_name, author_alias, content, created_at, updated_at`,
-    [pollId, authorName, authorAlias ?? null, content, parentCommentId ?? null]
+    `INSERT INTO poll_comments (
+       poll_id,
+       author_name,
+       author_alias,
+       author_avatar_initials,
+       author_avatar_color,
+       content,
+       parent_comment_id
+     )
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING
+       id,
+       poll_id,
+       parent_comment_id,
+       author_name,
+       author_alias,
+       author_avatar_initials,
+       author_avatar_color,
+       content,
+       created_at,
+       updated_at`,
+    [
+      pollId,
+      authorName,
+      authorAlias ?? null,
+      authorAvatarInitials ?? null,
+      authorAvatarColor ?? null,
+      content,
+      parentCommentId ?? null,
+    ]
   );
 
   const row = createdComment.rows[0];
+
+  const resolvedAuthorAlias = row.author_alias ?? authorAlias ?? null;
+  const resolvedAuthorAvatarInitials =
+    row.author_avatar_initials ?? authorAvatarInitials ?? null;
+  const resolvedAuthorAvatarColor =
+    row.author_avatar_color ?? authorAvatarColor ?? null;
+
   return {
     success: true,
     comment: {
@@ -156,7 +193,9 @@ const createComment = async ({
       pollId: row.poll_id,
       parentCommentId: row.parent_comment_id,
       authorName: row.author_name,
-      authorAlias: row.author_alias,
+      authorAlias: resolvedAuthorAlias,
+      authorAvatarInitials: resolvedAuthorAvatarInitials,
+      authorAvatarColor: resolvedAuthorAvatarColor,
       content: row.content,
       likes: 0,
       dislikes: 0,
@@ -183,6 +222,8 @@ const getCommentsByPollId = async ({
             c.parent_comment_id,
             c.author_name,
             c.author_alias,
+          c.author_avatar_initials,
+          c.author_avatar_color,
             c.content,
             c.created_at,
             c.updated_at,

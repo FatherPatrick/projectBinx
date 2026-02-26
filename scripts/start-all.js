@@ -378,7 +378,7 @@ const main = async () => {
   try {
     await runCommand(
       "docker",
-      ["compose", "up", "-d", "db", "backend"],
+      ["compose", "up", "-d", "--build", "db", "backend"],
       "stack"
     );
 

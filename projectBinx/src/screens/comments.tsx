@@ -35,6 +35,8 @@ interface CommentData {
   replyToAlias?: string;
   username: string;
   authorAlias?: string;
+  authorAvatarInitials?: string;
+  authorAvatarColor?: string;
   content: string;
   likes: number;
   dislikes: number;
@@ -72,6 +74,14 @@ const Comments: React.FC<Props> = ({route, navigation}) => {
   const currentAnonymousAlias =
     SessionService.getCurrentUser()?.anonymousAlias ??
     AnonymousNameService.generateRandomAlias();
+  const currentUserAvatar = AnonymousNameService.sanitizeAvatar(
+    {
+      initials: SessionService.getCurrentUser()?.profileAvatarInitials,
+      backgroundColor: SessionService.getCurrentUser()?.profileAvatarColor,
+    },
+    SessionService.getCurrentUser()?.username ?? currentUsername,
+    SessionService.getCurrentUser()?.displayName,
+  );
   const isAmaPoll = poll.type === 'ama';
   const pollAuthorUsername = poll.user.toLowerCase();
   const isCurrentUserPollAuthor =
@@ -130,6 +140,8 @@ const Comments: React.FC<Props> = ({route, navigation}) => {
     parentCommentId: comment.parentCommentId,
     username: comment.authorName,
     authorAlias: comment.authorAlias,
+    authorAvatarInitials: comment.authorAvatarInitials,
+    authorAvatarColor: comment.authorAvatarColor,
     content: comment.content,
     likes: comment.likes,
     dislikes: comment.dislikes,
@@ -143,6 +155,15 @@ const Comments: React.FC<Props> = ({route, navigation}) => {
       ? comment.authorAlias
       : AnonymousNameService.getDeterministicAlias(comment.username);
 
+  const getDisplayAvatar = (comment: CommentData) =>
+    AnonymousNameService.sanitizeAvatar(
+      {
+        initials: comment.authorAvatarInitials,
+        backgroundColor: comment.authorAvatarColor,
+      },
+      comment.username,
+    );
+
   const mergeCommentsFromServer = (
     incomingComments: CommentData[],
     append: boolean,
@@ -152,9 +173,30 @@ const Comments: React.FC<Props> = ({route, navigation}) => {
       const persistedComments = previousComments.filter(
         comment => !comment.isDraft,
       );
+      const persistedById = new Map(
+        persistedComments.map(comment => [comment.id, comment]),
+      );
 
       if (!append) {
-        return [...draftComments, ...incomingComments];
+        const mergedIncoming = incomingComments.map(comment => {
+          const previousComment = persistedById.get(comment.id);
+
+          if (!previousComment) {
+            return comment;
+          }
+
+          return {
+            ...comment,
+            authorAlias: comment.authorAlias ?? previousComment.authorAlias,
+            authorAvatarInitials:
+              comment.authorAvatarInitials ??
+              previousComment.authorAvatarInitials,
+            authorAvatarColor:
+              comment.authorAvatarColor ?? previousComment.authorAvatarColor,
+          };
+        });
+
+        return [...draftComments, ...mergedIncoming];
       }
 
       const existingIds = new Set(persistedComments.map(comment => comment.id));
@@ -414,6 +456,8 @@ const Comments: React.FC<Props> = ({route, navigation}) => {
       parentCommentId: null,
       username: currentUsername,
       authorAlias: currentAnonymousAlias,
+      authorAvatarInitials: currentUserAvatar.initials,
+      authorAvatarColor: currentUserAvatar.backgroundColor,
       content: '',
       likes: 0,
       dislikes: 0,
@@ -502,6 +546,8 @@ const Comments: React.FC<Props> = ({route, navigation}) => {
       replyToAlias: getDisplayAlias(parentComment),
       username: currentUsername,
       authorAlias: currentAnonymousAlias,
+      authorAvatarInitials: currentUserAvatar.initials,
+      authorAvatarColor: currentUserAvatar.backgroundColor,
       content: '',
       likes: 0,
       dislikes: 0,
@@ -773,16 +819,31 @@ const Comments: React.FC<Props> = ({route, navigation}) => {
         PollService.createCommentByPollId(poll.pollId!, {
           authorName: currentUsername,
           authorAlias: draftComment.authorAlias,
+          authorAvatarInitials: draftComment.authorAvatarInitials,
+          authorAvatarColor: draftComment.authorAvatarColor,
           content: trimmedContent,
           parentCommentId: draftComment.parentCommentId ?? undefined,
         }),
       1,
     )
       .then(createdComment => {
+        const mappedCreatedComment = mapPollCommentToUi(createdComment);
+
         setComments(currentComments =>
           currentComments.map(comment =>
             comment.id === commentId
-              ? mapPollCommentToUi(createdComment)
+              ? {
+                  ...mappedCreatedComment,
+                  authorAlias:
+                    mappedCreatedComment.authorAlias ??
+                    draftComment.authorAlias,
+                  authorAvatarInitials:
+                    mappedCreatedComment.authorAvatarInitials ??
+                    draftComment.authorAvatarInitials,
+                  authorAvatarColor:
+                    mappedCreatedComment.authorAvatarColor ??
+                    draftComment.authorAvatarColor,
+                }
               : comment,
           ),
         );
@@ -1039,6 +1100,7 @@ const Comments: React.FC<Props> = ({route, navigation}) => {
     const isReplyLocked = isAmaPoll && !isCurrentUserPollAuthor && !canReply;
     const isLikedByCurrentUser = Boolean(item.likedByCurrentUser);
     const isDislikedByCurrentUser = Boolean(item.dislikedByCurrentUser);
+    const avatar = getDisplayAvatar(item);
 
     if (item.isDraft) {
       const isSaveDisabled = item.content.trim().length === 0;
@@ -1046,7 +1108,13 @@ const Comments: React.FC<Props> = ({route, navigation}) => {
       return (
         <View style={[styles.commentCard, isReply ? styles.replyCard : null]}>
           <View style={styles.commentHeaderRow}>
-            <View style={styles.avatarPlaceholder} />
+            <View
+              style={[
+                styles.avatarPlaceholder,
+                {backgroundColor: avatar.backgroundColor},
+              ]}>
+              <Text style={styles.avatarInitialsText}>{avatar.initials}</Text>
+            </View>
             <View style={styles.commentContentWrap}>
               <Text style={styles.username}>{getDisplayAlias(item)}</Text>
               {item.replyToAlias ? (
@@ -1105,7 +1173,13 @@ const Comments: React.FC<Props> = ({route, navigation}) => {
         />
 
         <View style={styles.commentHeaderRow}>
-          <View style={styles.avatarPlaceholder} />
+          <View
+            style={[
+              styles.avatarPlaceholder,
+              {backgroundColor: avatar.backgroundColor},
+            ]}>
+            <Text style={styles.avatarInitialsText}>{avatar.initials}</Text>
+          </View>
           <View style={styles.commentContentWrap}>
             <Text style={styles.username}>{getDisplayAlias(item)}</Text>
             {parentCommentUsername ? (
@@ -1401,6 +1475,13 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: theme.colors.avatarPlaceholder,
     marginRight: theme.spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInitialsText: {
+    color: theme.colors.onPrimary,
+    fontSize: theme.fontSize.sm,
+    fontWeight: '600',
   },
   commentContentWrap: {
     flex: 1,

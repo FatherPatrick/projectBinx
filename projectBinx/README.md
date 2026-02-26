@@ -108,7 +108,6 @@ Backend URLs:
 
 ## Working Order TODO
 
-- allow user to select 'profile picture' which will be from a set selection of images.
-  - user can change background color
+- Clean up code architecture. All logic is in screen/components files instead of best practices
 - somehow make this location specific
 - define some way to deploy this reliably on vercel

@@ -52,23 +52,27 @@ const Profile = () => {
     sessionUser?.anonymousAlias ??
       AnonymousNameService.getDeterministicAlias(sessionUser?.username ?? ''),
   );
+  const [profileAvatar, setProfileAvatar] = useState(() =>
+    AnonymousNameService.sanitizeAvatar(
+      {
+        initials: sessionUser?.profileAvatarInitials,
+        backgroundColor: sessionUser?.profileAvatarColor,
+      },
+      sessionUser?.username ?? '',
+      sessionUser?.displayName,
+    ),
+  );
 
   const profileInfo = useMemo(
     () => ({
-      name: sessionUser?.displayName ?? 'User',
-      username: anonymousAlias,
+      name: anonymousAlias,
       bio: sessionUser?.phoneNumber
         ? `Phone: ${sessionUser.phoneNumber}`
         : sessionUser?.email
         ? `Email: ${sessionUser.email}`
         : 'Welcome to your profile.',
     }),
-    [
-      sessionUser?.displayName,
-      sessionUser?.phoneNumber,
-      sessionUser?.email,
-      anonymousAlias,
-    ],
+    [sessionUser?.phoneNumber, sessionUser?.email, anonymousAlias],
   );
 
   const handleRegenerateAlias = async () => {
@@ -77,6 +81,21 @@ const Profile = () => {
     if (updatedUser?.anonymousAlias) {
       setAnonymousAlias(updatedUser.anonymousAlias);
     }
+  };
+
+  const handleRegenerateProfilePicture = async () => {
+    const updatedUser = await SessionService.regenerateProfileAvatar();
+
+    setProfileAvatar(
+      AnonymousNameService.sanitizeAvatar(
+        {
+          initials: updatedUser?.profileAvatarInitials,
+          backgroundColor: updatedUser?.profileAvatarColor,
+        },
+        updatedUser?.username ?? sessionUser?.username ?? '',
+        updatedUser?.displayName ?? sessionUser?.displayName,
+      ),
+    );
   };
 
   const mergeUniquePolls = useCallback(
@@ -226,8 +245,6 @@ const Profile = () => {
     );
   };
 
-  const profileInitial = profileInfo.name.charAt(0).toUpperCase();
-
   const renderPoll = (poll: PollData) => {
     if (poll.type === 'simple') {
       return (
@@ -370,18 +387,34 @@ const Profile = () => {
         ListHeaderComponent={
           <>
             <View style={styles.profileHeader}>
-              <View style={styles.profileImagePlaceholder}>
-                <Text style={styles.profileImageText}>{profileInitial}</Text>
+              <View
+                style={[
+                  styles.profileImagePlaceholder,
+                  {backgroundColor: profileAvatar.backgroundColor},
+                ]}>
+                <Text style={styles.profileImageText}>
+                  {profileAvatar.initials}
+                </Text>
               </View>
 
               <View style={styles.profileDetails}>
                 <Text style={styles.name}>{profileInfo.name}</Text>
-                <Text style={styles.username}>{profileInfo.username}</Text>
-                <TouchableOpacity
-                  style={styles.aliasButton}
-                  onPress={handleRegenerateAlias}>
-                  <Text style={styles.aliasButtonText}>Regenerate Name</Text>
-                </TouchableOpacity>
+                <View style={styles.regenerateButtonsRow}>
+                  <TouchableOpacity
+                    style={styles.regenerateButton}
+                    onPress={handleRegenerateAlias}>
+                    <Text style={styles.regenerateButtonText}>
+                      Regenerate Name
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.regenerateButton}
+                    onPress={handleRegenerateProfilePicture}>
+                    <Text style={styles.regenerateButtonText}>
+                      Regenerate Picture
+                    </Text>
+                  </TouchableOpacity>
+                </View>
                 <Text style={styles.bio}>{profileInfo.bio}</Text>
 
                 <TouchableOpacity
@@ -455,7 +488,7 @@ const styles = StyleSheet.create({
   profileImageText: {
     fontSize: 28,
     fontWeight: '600',
-    color: theme.colors.textSecondary,
+    color: theme.colors.onPrimary,
   },
   profileDetails: {
     flex: 1,
@@ -470,14 +503,24 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 14,
   },
-  aliasButton: {
+  regenerateButtonsRow: {
     marginTop: theme.spacing.xs,
-    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
   },
-  aliasButtonText: {
-    color: theme.colors.link,
+  regenerateButton: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.sm,
+    backgroundColor: theme.colors.surface,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.sm,
+  },
+  regenerateButtonText: {
+    color: theme.colors.textSecondary,
     fontSize: theme.fontSize.sm,
-    textDecorationLine: 'underline',
+    fontWeight: '600',
   },
   bio: {
     marginTop: 8,

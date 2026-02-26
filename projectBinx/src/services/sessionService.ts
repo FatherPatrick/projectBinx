@@ -8,6 +8,8 @@ export interface SessionUser {
   phoneNumber: string;
   email: string;
   anonymousAlias: string;
+  profileAvatarInitials: string;
+  profileAvatarColor: string;
   username: string;
 }
 
@@ -32,6 +34,13 @@ const SessionService = {
     const phoneNumber =
       typeof user?.phoneNumber === 'string' ? user.phoneNumber : '';
     const email = typeof user?.email === 'string' ? user.email : '';
+    const previousAvatar =
+      currentUser?.profileAvatarInitials && currentUser?.profileAvatarColor
+        ? {
+            initials: currentUser.profileAvatarInitials,
+            backgroundColor: currentUser.profileAvatarColor,
+          }
+        : AnonymousNameService.generateRandomAvatar();
 
     currentUser = {
       id: user?.id,
@@ -41,6 +50,8 @@ const SessionService = {
       anonymousAlias:
         currentUser?.anonymousAlias ??
         AnonymousNameService.generateRandomAlias(),
+      profileAvatarInitials: previousAvatar.initials,
+      profileAvatarColor: previousAvatar.backgroundColor,
       username: toUsername(displayName),
     };
 
@@ -73,6 +84,8 @@ const SessionService = {
         return null;
       }
 
+      const fallbackAvatar = AnonymousNameService.generateRandomAvatar();
+
       currentUser = {
         id: parsedSession.id,
         displayName: parsedSession.displayName,
@@ -87,6 +100,16 @@ const SessionService = {
           parsedSession.anonymousAlias.trim().length > 0
             ? parsedSession.anonymousAlias
             : AnonymousNameService.generateRandomAlias(),
+        profileAvatarInitials:
+          typeof parsedSession.profileAvatarInitials === 'string' &&
+          parsedSession.profileAvatarInitials.trim().length > 0
+            ? parsedSession.profileAvatarInitials
+            : fallbackAvatar.initials,
+        profileAvatarColor:
+          typeof parsedSession.profileAvatarColor === 'string' &&
+          parsedSession.profileAvatarColor.trim().length > 0
+            ? parsedSession.profileAvatarColor
+            : fallbackAvatar.backgroundColor,
         username: parsedSession.username,
       };
       return currentUser;
@@ -105,6 +128,29 @@ const SessionService = {
     currentUser = {
       ...currentUser,
       anonymousAlias: AnonymousNameService.generateRandomAlias(),
+    };
+
+    try {
+      await AsyncStorage.setItem(
+        SESSION_STORAGE_KEY,
+        JSON.stringify(currentUser),
+      );
+    } catch (error) {}
+
+    return currentUser;
+  },
+
+  regenerateProfileAvatar: async (): Promise<SessionUser | null> => {
+    if (!currentUser) {
+      return null;
+    }
+
+    const nextAvatar = AnonymousNameService.generateRandomAvatar();
+
+    currentUser = {
+      ...currentUser,
+      profileAvatarInitials: nextAvatar.initials,
+      profileAvatarColor: nextAvatar.backgroundColor,
     };
 
     try {

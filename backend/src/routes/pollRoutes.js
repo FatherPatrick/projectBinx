@@ -337,6 +337,8 @@ router.post("/poll/comments/:id", commentCreateLimiter, async (req, res) => {
   const pollId = Number(req.params.id);
   const authorName = normalizeName(req.body.authorName);
   const authorAlias = String(req.body.authorAlias || "").trim();
+  const authorAvatarInitials = String(req.body.authorAvatarInitials || "").trim();
+  const authorAvatarColor = String(req.body.authorAvatarColor || "").trim();
   const content = String(req.body.content || "").trim();
   const parentCommentId =
     req.body.parentCommentId === undefined || req.body.parentCommentId === null
@@ -362,6 +364,8 @@ router.post("/poll/comments/:id", commentCreateLimiter, async (req, res) => {
       pollId,
       authorName,
       authorAlias: authorAlias || undefined,
+      authorAvatarInitials: authorAvatarInitials || undefined,
+      authorAvatarColor: authorAvatarColor || undefined,
       content,
       parentCommentId,
     });

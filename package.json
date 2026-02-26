@@ -7,7 +7,7 @@
     "dev:android": "npm --prefix projectBinx run android -- --no-packager",
     "dev:all": "concurrently -n backend,android -c cyan,magenta \"npm run dev:backend\" \"npm run dev:android\"",
     "start:all": "node scripts/start-all.js",
-    "stack:up": "docker compose up -d db backend",
+    "stack:up": "docker compose up -d --build db backend",
     "stack:down": "node scripts/stack-down.js",
     "stack:logs": "docker compose logs -f db backend",
     "db:reset": "docker compose down -v && docker compose up -d --build db backend"
