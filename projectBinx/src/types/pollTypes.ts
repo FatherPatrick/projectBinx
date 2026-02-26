@@ -5,6 +5,7 @@ export interface PollQueryParams {
   pageSize?: number;
   user?: string;
   type?: PollType;
+  viewerName?: string;
   viewerLatitude?: number;
   viewerLongitude?: number;
 }

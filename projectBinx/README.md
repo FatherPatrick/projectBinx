@@ -108,6 +108,4 @@ Backend URLs:
 
 ## Working Order TODO
 
-- Clean up code architecture. All logic is in screen/components files instead of best practices
-- make test users return all polls instead of being location specific
 - define some way to deploy this reliably on vercel

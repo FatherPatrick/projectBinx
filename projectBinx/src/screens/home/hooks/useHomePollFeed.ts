@@ -148,6 +148,7 @@ const useHomePollFeed = () => {
         const fetchedPolls = await PollService.getPagedPolls({
           page: pageToLoad,
           pageSize: PAGE_SIZE,
+          viewerName: currentUsername,
           viewerLatitude: location.latitude,
           viewerLongitude: location.longitude,
         });
@@ -174,7 +175,7 @@ const useHomePollFeed = () => {
         setLoading(false);
       }
     },
-    [mergeUniquePolls, withReactionCounts],
+    [currentUsername, mergeUniquePolls, withReactionCounts],
   );
 
   useEffect(() => {

@@ -48,6 +48,18 @@ const parseCoordinate = value => {
   return Number.isFinite(parsed) ? parsed : Number.NaN;
 };
 
+const testViewerExactNames = new Set([
+  'poll_tester',
+  'debug_user',
+  'qa_debug',
+  'qa_user',
+]);
+
+const isTestViewerName = value => {
+  const normalized = normalizeName(value);
+  return normalized.startsWith('qa_') || testViewerExactNames.has(normalized);
+};
+
 const isValidLatitude = value => value >= -90 && value <= 90;
 const isValidLongitude = value => value >= -180 && value <= 180;
 
@@ -101,6 +113,8 @@ router.get("/poll/paged", async (req, res) => {
 
   const viewerLatitude = parseCoordinate(req.query.viewerLatitude);
   const viewerLongitude = parseCoordinate(req.query.viewerLongitude);
+  const viewerName = normalizeName(req.query.viewerName);
+  const bypassDistanceFilter = isTestViewerName(viewerName);
 
   if (Number.isNaN(viewerLatitude) || Number.isNaN(viewerLongitude)) {
     return res.status(400).json({
@@ -119,6 +133,7 @@ router.get("/poll/paged", async (req, res) => {
       ...req.query,
       viewerLatitude,
       viewerLongitude,
+      bypassDistanceFilter,
       ...(type ? { type } : {}),
     });
     return res.status(200).json(polls);

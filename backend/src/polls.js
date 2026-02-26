@@ -76,6 +76,7 @@ const getPagedPolls = async ({
   type,
   viewerLatitude,
   viewerLongitude,
+  bypassDistanceFilter = false,
 }) => {
   const safePage = Math.max(1, Number(page) || 1);
   const safePageSize = Math.min(100, Math.max(1, Number(pageSize) || 20));
@@ -85,22 +86,24 @@ const getPagedPolls = async ({
   const whereClauses = [];
   const values = [];
 
-  values.push(safeViewerLatitude);
-  const viewerLatitudeIndex = values.length;
-  values.push(safeViewerLongitude);
-  const viewerLongitudeIndex = values.length;
+  if (!bypassDistanceFilter) {
+    values.push(safeViewerLatitude);
+    const viewerLatitudeIndex = values.length;
+    values.push(safeViewerLongitude);
+    const viewerLongitudeIndex = values.length;
 
-  whereClauses.push("p.latitude IS NOT NULL");
-  whereClauses.push("p.longitude IS NOT NULL");
-  whereClauses.push(`(
-      ${EARTH_RADIUS_MILES} * ACOS(
-        LEAST(1, GREATEST(-1,
-          COS(RADIANS($${viewerLatitudeIndex})) * COS(RADIANS(p.latitude)) *
-          COS(RADIANS(p.longitude) - RADIANS($${viewerLongitudeIndex})) +
-          SIN(RADIANS($${viewerLatitudeIndex})) * SIN(RADIANS(p.latitude))
-        ))
-      )
-    ) <= ${MAX_POLL_DISTANCE_MILES}`);
+    whereClauses.push("p.latitude IS NOT NULL");
+    whereClauses.push("p.longitude IS NOT NULL");
+    whereClauses.push(`(
+        ${EARTH_RADIUS_MILES} * ACOS(
+          LEAST(1, GREATEST(-1,
+            COS(RADIANS($${viewerLatitudeIndex})) * COS(RADIANS(p.latitude)) *
+            COS(RADIANS(p.longitude) - RADIANS($${viewerLongitudeIndex})) +
+            SIN(RADIANS($${viewerLatitudeIndex})) * SIN(RADIANS(p.latitude))
+          ))
+        )
+      ) <= ${MAX_POLL_DISTANCE_MILES}`);
+  }
 
   if (user) {
     values.push(user);

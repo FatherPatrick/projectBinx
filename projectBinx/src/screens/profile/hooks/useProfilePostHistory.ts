@@ -91,6 +91,7 @@ const useProfilePostHistory = ({
           user: username,
           page: pageToLoad,
           pageSize,
+          viewerName: username,
           viewerLatitude: location.latitude,
           viewerLongitude: location.longitude,
         });
