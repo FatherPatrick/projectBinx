@@ -108,4 +108,16 @@ Backend URLs:
 
 ## Working Order TODO
 
+- dark mode (settings button on profile page prolly)
+- censorship (just slurs), probably serverside
+- multiple language support
+- ask for app ratings
+  - after 10 poll posts, 25 comments
+  - modal asking if they like the app or not
+  - if yes, rating
+  - if no, close out of modal
+- look into how we can get ads in here
+- look into how we can support in app purchases to pay to turn off ads
+- terms of service/privacy?
+- look into preventing injection attacks
 - define some way to deploy this reliably on vercel
