@@ -119,8 +119,53 @@ Backend DB settings are read from environment variables. For local compose defau
 - `DB_PORT=5432`
 - `POLL_BACKFILL_LATITUDE=39.8283` (optional, used to backfill existing polls missing coordinates)
 - `POLL_BACKFILL_LONGITUDE=-98.5795` (optional, used to backfill existing polls missing coordinates)
+- `OPENAI_API_KEY=` (required for moderation)
+- `OPENAI_MODERATION_MODEL=omni-moderation-latest` (optional)
 
 You can customize these by creating a root `.env` file before running `npm run stack:up`.
+
+### OpenAI Text Moderation
+
+Backend write endpoints use OpenAI Moderation for disallowed language checks (no local slur list required).
+
+- Set `OPENAI_API_KEY` so moderation can run.
+- Optional: set `OPENAI_MODERATION_MODEL` (defaults to `omni-moderation-latest`).
+- If moderation API fails, write endpoints return `503` with a temporary unavailability message.
+
+### Next Steps (Make It Work)
+
+1. Add your OpenAI key to a root `.env` file:
+
+```env
+OPENAI_API_KEY=your_key_here
+OPENAI_MODERATION_MODEL=omni-moderation-latest
+```
+
+2. Restart services so env vars are picked up:
+
+```bash
+npm run stack:down
+npm run stack:up
+```
+
+3. Confirm backend is healthy:
+
+- `GET http://localhost:4000/health` should return `200`
+
+4. Verify moderation behavior with write endpoints:
+
+- Send a normal `POST /api/poll` payload and confirm it succeeds.
+- Send a clearly disallowed payload and confirm API returns `400` with `Content contains disallowed language.`
+
+5. If requests return `503`, check backend logs:
+
+- Key missing/invalid, network issue, or OpenAI API outage can cause temporary moderation unavailability.
+
+The filter currently runs on:
+
+- `POST /api/poll` (title, description, and option text)
+- `PUT /api/poll/update/:id` (title, description, and option text)
+- `POST /api/poll/comments/:id` (comment content)
 
 ## API Configuration
 

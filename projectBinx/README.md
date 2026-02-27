@@ -108,7 +108,8 @@ Backend URLs:
 
 ## Working Order TODO
 
-- dark mode (settings button on profile page prolly)
+- general styling
+  - dark mode (settings button on profile page prolly)
 - censorship (just slurs), probably serverside
 - multiple language support
 - ask for app ratings

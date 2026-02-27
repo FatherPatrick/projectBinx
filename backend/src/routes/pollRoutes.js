@@ -16,6 +16,7 @@ const {
   pollVoteLimiter,
   reactionWriteLimiter,
 } = require("../middleware/rateLimiters");
+const { createSlurFilter } = require("../middleware/slurFilter");
 const {
   clearCommentReaction,
   clearPollReaction,
@@ -29,6 +30,21 @@ const {
 } = require("../interactions");
 
 const router = express.Router();
+
+const pollTextSlurFilter = createSlurFilter({
+  getValues: (req) => {
+    const poll = req.body ?? {};
+    const optionTexts = Array.isArray(poll.options)
+      ? poll.options.map((option) => option?.optionText)
+      : [];
+
+    return [poll.title, poll.description, ...optionTexts];
+  },
+});
+
+const commentTextSlurFilter = createSlurFilter({
+  getValues: (req) => [req.body?.content],
+});
 
 const normalizeName = (value) =>
   String(value || "")
@@ -155,7 +171,7 @@ router.get("/poll/paged", async (req, res) => {
  *       201:
  *         description: Created poll
  */
-router.post("/poll", pollCreateLimiter, async (req, res) => {
+router.post("/poll", pollCreateLimiter, pollTextSlurFilter, async (req, res) => {
   const poll = req.body;
   const pollType = normalizePollType(poll?.type);
   const latitude = parseCoordinate(poll?.latitude);
@@ -218,7 +234,11 @@ router.post("/poll", pollCreateLimiter, async (req, res) => {
  *       404:
  *         description: Poll not found
  */
-router.put("/poll/update/:id", pollUpdateLimiter, async (req, res) => {
+router.put(
+  "/poll/update/:id",
+  pollUpdateLimiter,
+  pollTextSlurFilter,
+  async (req, res) => {
   const pollId = Number(req.params.id);
   const pollType = normalizePollType(req.body?.type);
   const latitude = parseCoordinate(req.body?.latitude);
@@ -264,7 +284,8 @@ router.put("/poll/update/:id", pollUpdateLimiter, async (req, res) => {
       message: "Unable to update poll right now.",
     });
   }
-});
+  }
+);
 
 /**
  * @swagger
@@ -415,7 +436,11 @@ router.get("/poll/comments/:id", async (req, res) => {
   }
 });
 
-router.post("/poll/comments/:id", commentCreateLimiter, async (req, res) => {
+router.post(
+  "/poll/comments/:id",
+  commentCreateLimiter,
+  commentTextSlurFilter,
+  async (req, res) => {
   const pollId = Number(req.params.id);
   const authorName = normalizeName(req.body.authorName);
   const authorAlias = String(req.body.authorAlias || "").trim();
@@ -477,7 +502,8 @@ router.post("/poll/comments/:id", commentCreateLimiter, async (req, res) => {
       message: "Unable to create comment right now.",
     });
   }
-});
+  }
+);
 
 router.delete(
   "/poll/comments/:pollId/:commentId",
