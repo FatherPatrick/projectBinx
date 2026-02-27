@@ -5,6 +5,27 @@ const openAiApiKey = String(process.env.OPENAI_API_KEY || "").trim();
 const moderationClient = openAiApiKey ? new OpenAI({ apiKey: openAiApiKey }) : null;
 
 let hasWarnedMissingKey = false;
+let hasWarnedDisabledModeration = false;
+
+const parseBooleanEnv = (value, defaultValue = false) => {
+  if (value === undefined || value === null || value === "") {
+    return defaultValue;
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+
+  if (["1", "true", "yes", "on", "enabled"].includes(normalized)) {
+    return true;
+  }
+
+  if (["0", "false", "no", "off", "disabled"].includes(normalized)) {
+    return false;
+  }
+
+  return defaultValue;
+};
+
+const isModerationEnabled = () => parseBooleanEnv(process.env.OPENAI_MODERATION_ENABLED, false);
 
 const toModerationInput = (value) => {
   if (Array.isArray(value)) {
@@ -18,6 +39,15 @@ const containsSlur = async (value) => {
   const input = toModerationInput(value);
 
   if (!input) {
+    return false;
+  }
+
+  if (!isModerationEnabled()) {
+    if (!hasWarnedDisabledModeration) {
+      console.warn("OpenAI moderation disabled: OPENAI_MODERATION_ENABLED is not true.");
+      hasWarnedDisabledModeration = true;
+    }
+
     return false;
   }
 
@@ -48,8 +78,7 @@ const createSlurFilter = ({
     const candidates = Array.isArray(values) ? values : [values];
 
     try {
-      const checks = await Promise.all(candidates.map((candidate) => containsSlur(candidate)));
-      const matched = checks.some(Boolean);
+      const matched = await containsSlur(candidates);
 
       if (matched) {
         return res.status(400).json({ message });
@@ -68,4 +97,5 @@ const createSlurFilter = ({
 module.exports = {
   containsSlur,
   createSlurFilter,
+  isModerationEnabled,
 };

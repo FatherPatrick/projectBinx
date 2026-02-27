@@ -119,7 +119,8 @@ Backend DB settings are read from environment variables. For local compose defau
 - `DB_PORT=5432`
 - `POLL_BACKFILL_LATITUDE=39.8283` (optional, used to backfill existing polls missing coordinates)
 - `POLL_BACKFILL_LONGITUDE=-98.5795` (optional, used to backfill existing polls missing coordinates)
-- `OPENAI_API_KEY=` (required for moderation)
+- `OPENAI_MODERATION_ENABLED=false` (set `true` to enable OpenAI moderation checks)
+- `OPENAI_API_KEY=` (required only when moderation is enabled)
 - `OPENAI_MODERATION_MODEL=omni-moderation-latest` (optional)
 
 You can customize these by creating a root `.env` file before running `npm run stack:up`.
@@ -139,6 +140,7 @@ copy .env.example .env
 Then edit `.env` and set:
 
 ```env
+OPENAI_MODERATION_ENABLED=false
 OPENAI_API_KEY=your_real_key_here
 ```
 
@@ -148,8 +150,10 @@ If a key was ever committed, rotate it immediately in OpenAI dashboard and repla
 
 Backend write endpoints use OpenAI Moderation for disallowed language checks (no local slur list required).
 
-- Set `OPENAI_API_KEY` so moderation can run.
+- Set `OPENAI_MODERATION_ENABLED=true` to turn moderation on.
+- Set `OPENAI_API_KEY` so moderation can run when enabled.
 - Optional: set `OPENAI_MODERATION_MODEL` (defaults to `omni-moderation-latest`).
+- When moderation is disabled, slur filtering is bypassed and no OpenAI moderation calls are made.
 - If moderation API fails, write endpoints return `503` with a temporary unavailability message.
 
 ### Next Steps (Make It Work)
@@ -157,6 +161,7 @@ Backend write endpoints use OpenAI Moderation for disallowed language checks (no
 1. Add your OpenAI key to a root `.env` file:
 
 ```env
+OPENAI_MODERATION_ENABLED=true
 OPENAI_API_KEY=your_key_here
 OPENAI_MODERATION_MODEL=omni-moderation-latest
 ```
