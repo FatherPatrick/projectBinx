@@ -124,6 +124,26 @@ Backend DB settings are read from environment variables. For local compose defau
 
 You can customize these by creating a root `.env` file before running `npm run stack:up`.
 
+### Secrets (Safe Setup)
+
+- Never commit real API keys to git.
+- Use the committed template [`.env.example`](.env.example), then create your local `.env` from it.
+- Keep your real key only in local `.env` (ignored by git) or your deployment platform's secrets manager.
+
+Quick setup:
+
+```bash
+copy .env.example .env
+```
+
+Then edit `.env` and set:
+
+```env
+OPENAI_API_KEY=your_real_key_here
+```
+
+If a key was ever committed, rotate it immediately in OpenAI dashboard and replace it in your local/deployment secrets.
+
 ### OpenAI Text Moderation
 
 Backend write endpoints use OpenAI Moderation for disallowed language checks (no local slur list required).
