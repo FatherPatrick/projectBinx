@@ -20,6 +20,7 @@ import HomeFilterMenu from './components/HomeFilterMenu';
 import globalStyles from '../../styles/globalStyles';
 import styles from '../../styles/homeStyles';
 import theme from '../../styles/theme';
+import NativeAdvancedAdCard from '../../components/NativeAdvancedAdCard';
 
 interface Props {
   navigation: BottomTabNavigationProp<MainTabParamList, 'Home'>;
@@ -148,10 +149,15 @@ const HomeScreen: React.FC<Props> = ({navigation, route}) => {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
-          <HomeFilterHeader
-            filterButtonRef={filterButtonRef}
-            onOpenFilterMenu={handleOpenFilterMenu}
-          />
+          <View>
+            <HomeFilterHeader
+              filterButtonRef={filterButtonRef}
+              onOpenFilterMenu={handleOpenFilterMenu}
+            />
+            <View style={styles.bannerContainer}>
+              <NativeAdvancedAdCard />
+            </View>
+          </View>
         }
         ListEmptyComponent={
           !loading ? (

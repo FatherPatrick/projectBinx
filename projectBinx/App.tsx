@@ -13,6 +13,7 @@ import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import Profile from './src/screens/profile/ProfileScreen';
 import Comments from './src/screens/comments/CommentsScreen';
 import SessionService from './src/services/sessionService';
+import mobileAds from 'react-native-google-mobile-ads';
 
 const Stack = createStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -84,6 +85,10 @@ const MainTabs = () => {
 function App(): React.JSX.Element {
   const [sessionReady, setSessionReady] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    mobileAds().initialize();
+  }, []);
 
   useEffect(() => {
     const initializeSession = async () => {

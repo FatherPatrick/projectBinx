@@ -14,9 +14,13 @@ Moderation target behavior: any poll that reaches **-5 score** is auto-deleted.
 ## Current Features
 
 - Authentication flow screens (`Login`, `CreateAccount`, `ForgotPassword`)
-- Home poll feed with dynamic poll rendering
+- Session restore on app launch via AsyncStorage-backed session service
+- Bottom-tab app shell (`Home`, `CreatePoll`, `Profile`) with stack-based routes
+- Home poll feed with dynamic poll rendering, sorting controls, and pull-to-refresh
+- Comments screen route wired from poll actions
 - Poll API service (`getPagedPolls`, `postPoll`, `voteById`, etc.)
 - Poll type foundations: `simple`, `slider`, and `ama`
+- AdMob initialized at app startup with ad rendering on Home
 
 ## Run the App
 
@@ -63,6 +67,30 @@ Set your backend URL in:
 
 Android emulator default is configured to `http://10.0.2.2:4000/api`.
 
+## AdMob Setup
+
+AdMob is wired and initialized in app startup, with the Home feed currently rendering a card-styled **Banner** ad (`MEDIUM_RECTANGLE`) for Android testing.
+
+Important compatibility note:
+
+- The project uses `react-native-google-mobile-ads@13.4.0` (compatible with `react-native@0.73.x`).
+- This package version supports banner/interstitial/rewarded flows; Native Advanced view components are not currently exposed in this version.
+
+Before release, replace IDs with your real values:
+
+- Android app ID in [android/app/src/main/AndroidManifest.xml](android/app/src/main/AndroidManifest.xml)
+- iOS app ID in [ios/projectBinx/Info.plist](ios/projectBinx/Info.plist)
+- Banner ad unit IDs in [src/config/admob.ts](src/config/admob.ts)
+
+Required config for this package version:
+
+- `app.json` includes `react-native-google-mobile-ads.android_app_id` in [app.json](app.json)
+
+Notes:
+
+- Keep test IDs in development (`__DEV__`) to avoid policy violations.
+- AdMob app IDs (`~`) are different from ad unit IDs (`/`).
+
 ## Test Login Credentials
 
 Backend auth is wired and seeded in Postgres on first startup.
@@ -78,6 +106,7 @@ Backend auth is wired and seeded in Postgres on first startup.
 - `npm start` - start Metro bundler
 - `npm run android` - run Android app
 - `npm run ios` - run iOS app
+- `npm run dev:all` - delegate to root and run backend + Android together
 - `npm test` - run Jest tests
 - `npm run lint` - run ESLint
 
@@ -117,8 +146,10 @@ Backend URLs:
   - modal asking if they like the app or not
   - if yes, rating
   - if no, close out of modal
-- look into how we can get ads in here
+- make sure ads work on ios
 - look into how we can support in app purchases to pay to turn off ads
+- datadog for analytics
+  - mock reports of analytics
 - terms of service/privacy?
 - look into preventing injection attacks
 - define some way to deploy this reliably on vercel

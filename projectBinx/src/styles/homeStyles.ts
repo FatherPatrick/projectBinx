@@ -10,6 +10,10 @@ const styles = StyleSheet.create({
     padding: theme.spacing.xl,
     flexGrow: 1,
   },
+  bannerContainer: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.lg,
+  },
   footerLoader: {
     paddingVertical: theme.spacing.md,
   },

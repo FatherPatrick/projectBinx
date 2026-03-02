@@ -1,4 +1,7 @@
 {
   "name": "projectBinx",
-  "displayName": "projectBinx"
+  "displayName": "projectBinx",
+  "react-native-google-mobile-ads": {
+    "android_app_id": "ca-app-pub-7982832313549251~6694520684"
+  }
 }
